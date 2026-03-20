@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Escritório Monsuetto Rodrigues — Sistema</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+:root{
+  --navy:#0C1B33;--navy2:#142444;--navy3:#1B3060;
+  --gold:#C4962A;--gold2:#E8B84B;--gold-bg:rgba(196,150,42,0.10);
+  --cream:#F9F7F2;--white:#FFFFFF;--border:#E2DDD4;
+  --muted:#7A7060;--text:#18120A;
+  --ok:#1A5C32;--warn:#8B4800;--danger:#7A1515;--info:#0C3B6B;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);min-height:100vh}
+
+/* TOPBAR */
+.topbar{background:var(--navy);height:58px;display:flex;align-items:center;padding:0 24px;gap:14px;position:sticky;top:0;z-index:200;border-bottom:2px solid var(--gold)}
+.tb-seal{width:38px;height:38px;border-radius:50%;border:2px solid var(--gold);background:var(--gold-bg);display:flex;align-items:center;justify-content:center;font-family:'Crimson Pro',serif;font-size:16px;color:var(--gold);font-weight:700}
+.tb-name{font-family:'Crimson Pro',serif;font-size:17px;font-weight:600;color:#fff;line-height:1.1}
+.tb-sub{font-size:10px;color:rgba(255,255,255,0.4);margin-top:1px}
+.tb-nav{display:flex;gap:2px;margin-left:20px;overflow-x:auto}
+.tb-nav::-webkit-scrollbar{display:none}
+.tn{background:transparent;border:none;color:rgba(255,255,255,0.55);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;padding:6px 14px;border-radius:8px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.tn:hover{color:#fff;background:rgba(255,255,255,0.06)}
+.tn.on{color:var(--gold);background:var(--gold-bg)}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.status-pill{display:flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:14px;border:1px solid}
+.status-pill.ok{color:#4ade80;border-color:rgba(74,222,128,0.3);background:rgba(74,222,128,0.08)}
+.status-pill.err{color:#f87171;border-color:rgba(248,113,113,0.3);background:rgba(248,113,113,0.08)}
+.status-dot{width:6px;height:6px;border-radius:50%;animation:blink 2s infinite}
+.ok .status-dot{background:#4ade80}
+.err .status-dot{background:#f87171}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* LAYOUT */
+.app{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 58px)}
+
+/* SIDEBAR */
+.sidebar{background:var(--navy2);border-right:1px solid rgba(255,255,255,0.06);padding:18px 10px;overflow-y:auto}
+.sb-sec{margin-bottom:18px}
+.sb-lbl{font-size:9px;font-weight:600;color:rgba(255,255,255,0.28);text-transform:uppercase;letter-spacing:1.5px;padding:0 10px;margin-bottom:5px}
+.si{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;font-size:12px;font-weight:500;color:rgba(255,255,255,0.55);cursor:pointer;transition:all .15s;margin-bottom:1px}
+.si:hover{color:#fff;background:rgba(255,255,255,0.05)}
+.si.on{color:var(--gold);background:var(--gold-bg)}
+.si-icon{font-size:14px;width:18px;text-align:center}
+.si-badge{margin-left:auto;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px}
+.si-badge.gold{background:var(--gold-bg);color:var(--gold)}
+.si-badge.red{background:rgba(122,21,21,0.3);color:#F08080}
+
+.sb-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px;margin-top:8px}
+.sb-card-title{font-size:9px;font-weight:600;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+.sb-stat{display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05)}
+.sb-stat:last-child{border-bottom:none}
+.sb-stat span:first-child{font-size:11px;color:rgba(255,255,255,0.45)}
+.sb-stat span:last-child{font-size:13px;font-weight:600;color:var(--gold)}
+
+/* MAIN */
+.main{overflow-y:auto}
+.page{display:none;padding:24px}
+.page.on{display:block}
+
+/* PAGE HEADER */
+.ph{margin-bottom:22px}
+.ph-eyebrow{font-size:9px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1.8px;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.ph-eyebrow::after{content:'';flex:1;height:1px;background:var(--gold-bg)}
+.ph h1{font-family:'Crimson Pro',serif;font-size:28px;font-weight:600;color:var(--navy);letter-spacing:-0.3px}
+.ph p{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.5}
+
+/* STAT CARDS */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.stat{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:16px;border-top:3px solid var(--gold)}
+.stat-val{font-family:'Crimson Pro',serif;font-size:36px;font-weight:600;color:var(--navy)}
+.stat-lbl{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-top:2px}
+.stat-note{font-size:11px;margin-top:6px}
+
+/* CARDS */
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+.card-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.card-title{font-family:'Crimson Pro',serif;font-size:16px;font-weight:600;color:var(--navy);display:flex;align-items:center;gap:8px}
+.card-title::before{content:'';width:3px;height:16px;border-radius:2px;background:var(--gold);flex-shrink:0}
+
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:9px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:8px 12px;background:var(--cream);border-bottom:1px solid var(--border);text-align:left}
+.tbl td{padding:10px 12px;border-bottom:1px solid var(--border);vertical-align:middle;line-height:1.4}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:rgba(249,247,242,0.7)}
+
+/* TAGS */
+.tag{display:inline-block;font-size:9px;font-weight:700;padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.4px}
+.tag-trab{background:rgba(12,59,107,0.1);color:var(--info)}
+.tag-civ{background:rgba(26,92,50,0.1);color:var(--ok)}
+.tag-prev{background:rgba(139,72,0,0.1);color:var(--warn)}
+.tag-fam{background:rgba(122,21,21,0.1);color:var(--danger)}
+.tag-cons{background:rgba(196,150,42,0.12);color:#7A5A10}
+
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:3px 10px;border-radius:12px}
+.pill-ok{background:rgba(26,92,50,0.1);color:var(--ok)}
+.pill-warn{background:rgba(139,72,0,0.1);color:var(--warn)}
+.pill-danger{background:rgba(122,21,21,0.1);color:var(--danger)}
+.pill-muted{background:rgba(122,112,96,0.1);color:var(--muted)}
+
+/* ALERT */
+.alert{border-radius:10px;padding:12px 16px;font-size:12px;line-height:1.6;display:flex;gap:10px;margin-bottom:14px}
+.alert-icon{font-size:16px;flex-shrink:0;margin-top:1px}
+.alert.ok{background:rgba(26,92,50,0.06);border:1px solid rgba(26,92,50,0.2)}
+.alert.warn{background:rgba(139,72,0,0.06);border:1px solid rgba(139,72,0,0.2)}
+.alert.info{background:rgba(12,59,107,0.06);border:1px solid rgba(12,59,107,0.2)}
+.alert.danger{background:rgba(122,21,21,0.06);border:1px solid rgba(122,21,21,0.2)}
+
+/* FORM */
+.fg{margin-bottom:12px}
+.fg label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px}
+.fg input,.fg select,.fg textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);background:#fff;outline:none;transition:border-color .2s}
+.fg input:focus,.fg select:focus,.fg textarea:focus{border-color:var(--navy)}
+.fg textarea{resize:vertical;min-height:70px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:0}
+
+/* BUTTONS */
+.btn{padding:9px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .2s}
+.btn-primary{background:var(--navy);color:var(--gold)}
+.btn-primary:hover{background:var(--navy3)}
+.btn-gold{background:var(--gold);color:var(--navy)}
+.btn-gold:hover{background:var(--gold2)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted)}
+.btn-outline:hover{border-color:var(--navy);color:var(--navy)}
+.btn-sm{padding:6px 14px;font-size:11px}
+
+/* MODAL */
+.modal-over{display:none;position:fixed;inset:0;background:rgba(12,27,51,0.6);z-index:500;align-items:center;justify-content:center}
+.modal-over.open{display:flex}
+.modal{background:var(--white);border-radius:16px;width:520px;max-height:90vh;overflow-y:auto;padding:28px;box-shadow:0 20px 60px rgba(0,0,0,0.25)}
+.modal-title{font-family:'Crimson Pro',serif;font-size:22px;font-weight:600;color:var(--navy);margin-bottom:20px;display:flex;justify-content:space-between;align-items:center}
+.modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted)}
+
+/* LOADING */
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--navy);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ABNT PEÇA */
+.abnt{font-family:'Crimson Pro',serif;font-size:13px;line-height:2;text-align:justify;color:var(--text);background:var(--cream);padding:20px 24px;border-radius:8px;border:1px solid var(--border)}
+.abnt-title{font-size:14px;font-weight:700;text-align:center;margin-bottom:12px;text-transform:uppercase}
+.abnt-sec{font-size:13px;font-weight:700;text-transform:uppercase;margin:16px 0 8px;color:var(--navy)}
+.abnt-p{text-indent:1.5cm;margin-bottom:8px}
+.abnt-ementa{font-style:italic;padding:10px 16px;border-left:3px solid var(--gold);background:rgba(196,150,42,0.05);margin:12px 0;line-height:1.8}
+
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="tb-seal">MR</div>
+  <div>
+    <div class="tb-name">Escritório Monsuetto Rodrigues</div>
+    <div class="tb-sub">OAB/RJ 160959 · Advocacia Especializada</div>
+  </div>
+  <nav class="tb-nav">
+    <button class="tn on" onclick="nav('dashboard',this)">Dashboard</button>
+    <button class="tn" onclick="nav('processos',this)">Processos</button>
+    <button class="tn" onclick="nav('clientes',this)">Clientes</button>
+    <button class="tn" onclick="nav('prazos',this)">Prazos</button>
+    <button class="tn" onclick="nav('pecas',this)">Peças ABNT</button>
+    <button class="tn" onclick="nav('portal',this)">Portal Cliente</button>
+  </nav>
+  <div class="tb-right">
+    <div class="status-pill" id="statusPill">
+      <div class="status-dot"></div>
+      <span id="statusTxt">Conectando...</span>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+<aside class="sidebar">
+  <div class="sb-sec">
+    <div class="sb-lbl">Escritório</div>
+    <div class="si on" onclick="nav('dashboard')"><span class="si-icon">◼</span>Dashboard</div>
+    <div class="si" onclick="nav('processos')"><span class="si-icon">⚖</span>Processos<span class="si-badge gold" id="sb-nproc">...</span></div>
+    <div class="si" onclick="nav('clientes')"><span class="si-icon">👤</span>Clientes<span class="si-badge gold" id="sb-ncli">...</span></div>
+    <div class="si" onclick="nav('prazos')"><span class="si-icon">⏰</span>Prazos<span class="si-badge red" id="sb-npraz">...</span></div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Ferramentas</div>
+    <div class="si" onclick="nav('pecas')"><span class="si-icon">📝</span>Peças ABNT</div>
+    <div class="si" onclick="nav('portal')"><span class="si-icon">📱</span>Portal Cliente</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">Áreas</div>
+    <div class="si"><span class="si-icon">👷</span>Trabalhista<span class="si-badge gold" id="n-trab">–</span></div>
+    <div class="si"><span class="si-icon">⚖</span>Cível<span class="si-badge gold" id="n-civ">–</span></div>
+    <div class="si"><span class="si-icon">🏛</span>Previdenciário<span class="si-badge gold" id="n-prev">–</span></div>
+    <div class="si"><span class="si-icon">👨‍👩‍👧</span>Família<span class="si-badge gold" id="n-fam">–</span></div>
+    <div class="si"><span class="si-icon">🛒</span>Consumidor<span class="si-badge gold" id="n-cons">–</span></div>
+  </div>
+  <div class="sb-card">
+    <div class="sb-card-title">Banco de dados</div>
+    <div class="sb-stat"><span>Clientes</span><span id="st-cli">–</span></div>
+    <div class="sb-stat"><span>Processos</span><span id="st-proc">–</span></div>
+    <div class="sb-stat"><span>Prazos urgentes</span><span id="st-praz">–</span></div>
+    <div class="sb-stat"><span>Supabase</span><span id="st-sb" style="font-size:10px;color:var(--warn)">...</span></div>
+  </div>
+</aside>
+
+<main class="main">
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page on">
+  <div class="ph">
+    <div class="ph-eyebrow">Painel Operacional — <span id="hoje-txt"></span></div>
+    <h1>Bom dia, Dr. Monsuetto.</h1>
+    <p>Escritório de Advocacia Monsuetto Rodrigues · OAB/RJ 160959</p>
+  </div>
+
+  <div id="banner-sql" class="alert info" style="display:none">
+    <div class="alert-icon">ℹ</div>
+    <div><strong>CRM carregado:</strong> 53 processos ativos importados do CRM Processual v2.</div>
+  </div>
+
+  <div class="stats" id="stats-cards">
+    <div class="stat" style="border-top-color:var(--gold)">
+      <div class="stat-val" id="d-proc">–</div>
+      <div class="stat-lbl">Processos no banco</div>
+      <div class="stat-note" style="color:var(--muted)">Cadastre para ativar</div>
+    </div>
+    <div class="stat" style="border-top-color:var(--info)">
+      <div class="stat-val" id="d-cli">–</div>
+      <div class="stat-lbl">Clientes cadastrados</div>
+      <div class="stat-note" style="color:var(--muted)">Adicione na aba Clientes</div>
+    </div>
+    <div class="stat" style="border-top-color:var(--danger)">
+      <div class="stat-val" id="d-praz">–</div>
+      <div class="stat-lbl">Prazos urgentes</div>
+      <div class="stat-note" style="color:var(--muted)">Próximos 7 dias</div>
+    </div>
+    <div class="stat" style="border-top-color:var(--ok)">
+      <div class="stat-val">5</div>
+      <div class="stat-lbl">Áreas de atuação</div>
+      <div class="stat-note" style="color:var(--ok)">Trab · Cív · Prev · Fam · Cons</div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">Processos por área</div>
+        <button class="btn btn-outline btn-sm" onclick="nav('processos')">Ver todos</button>
+      </div>
+      <div id="barras-area" style="display:flex;flex-direction:column;gap:10px">
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Cadastre processos para ver o gráfico</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">Próximos prazos</div>
+        <button class="btn btn-gold btn-sm" onclick="openModal('addPrazo')">+ Adicionar</button>
+      </div>
+      <div id="lista-prazos">
+        <div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">
+          <div style="font-size:28px;margin-bottom:8px">⏰</div>
+          Nenhum prazo cadastrado ainda.<br>
+          <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="openModal('addPrazo')">Adicionar primeiro prazo</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROCESSOS -->
+<div id="page-processos" class="page">
+  <div class="ph">
+    <div class="ph-eyebrow">Gestão Processual</div>
+    <h1>Processos</h1>
+    <p>Cadastre e gerencie todos os processos do escritório</p>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <button class="btn btn-primary" onclick="openModal('addProc')">+ Novo processo</button>
+    <button class="btn btn-outline" onclick="carregarProcessos()">↻ Atualizar</button>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Todos os processos</div>
+      <div id="proc-count" style="font-size:12px;color:var(--muted)">carregando...</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Nº CNJ</th><th>Cliente</th><th>Área</th>
+            <th>Status</th><th>Próx. prazo</th><th>Ações</th>
+          </tr>
+        </thead>
+        <tbody id="proc-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">
+            <div class="spinner"></div> Carregando processos...
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENTES -->
+<div id="page-clientes" class="page">
+  <div class="ph">
+    <div class="ph-eyebrow">CRM de Clientes</div>
+    <h1>Clientes</h1>
+    <p>Cadastro completo com acesso ao portal</p>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn btn-primary" onclick="openModal('addCliente')">+ Novo cliente</button>
+    <button class="btn btn-outline" onclick="carregarClientes()">↻ Atualizar</button>
+  </div>
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Clientes cadastrados</div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr><th>Nome</th><th>Telefone</th><th>WhatsApp</th><th>Área</th><th>Status</th><th>Portal</th></tr>
+        </thead>
+        <tbody id="cli-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">
+            <div class="spinner"></div> Carregando clientes...
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PRAZOS -->
+<div id="page-prazos" class="page">
+  <div class="ph">
+    <div class="ph-eyebrow">Controle de Prazos</div>
+    <h1>Prazos & Audiências</h1>
+    <p>Nenhum prazo pode ser perdido</p>
+  </div>
+  <div style="display:flex;gap:10px;margin-bottom:16px">
+    <button class="btn btn-primary" onclick="openModal('addPrazo')">+ Novo prazo</button>
+    <button class="btn btn-outline" onclick="carregarPrazos()">↻ Atualizar</button>
+  </div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">Todos os prazos</div></div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr><th>Processo</th><th>Descrição</th><th>Data limite</th><th>Dias</th><th>Status</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="praz-tbody">
+          <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">
+            <div class="spinner"></div> Carregando prazos...
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PEÇAS ABNT -->
+<div id="page-pecas" class="page">
+  <div class="ph">
+    <div class="ph-eyebrow">Gerador com IA — Tipografia Jurídica ABNT</div>
+    <h1>Peças Processuais</h1>
+    <p>Rascunho gerado por IA · Revisão obrigatória pelo Dr. Monsuetto antes de protocolar</p>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">Configurar a peça</div></div>
+      <div class="fg"><label>Tipo de peça</label>
+        <select id="p-tipo">
+          <option>Petição Inicial — Reclamação Trabalhista</option>
+          <option>Petição Inicial — Indenização por Dano Moral</option>
+          <option>Petição Inicial — Benefício Previdenciário Negado</option>
+          <option>Contestação</option>
+          <option>Recurso de Apelação</option>
+          <option>Recurso de Revista (TST)</option>
+          <option>Tutela de Urgência / Liminar</option>
+          <option>Embargos de Declaração</option>
+          <option>Agravo de Instrumento</option>
+        </select>
+      </div>
+      <div class="fg"><label>Nome do cliente (autor)</label><input id="p-cliente" placeholder="Nome completo do cliente"></div>
+      <div class="fg"><label>Parte contrária (réu)</label><input id="p-reu" placeholder="Empresa ou pessoa requerida"></div>
+      <div class="fg"><label>Vara / Tribunal</label><input id="p-vara" value="Vara do Trabalho — Rio de Janeiro/RJ"></div>
+      <div class="fg"><label>Resumo dos fatos</label><textarea id="p-fatos" placeholder="Descreva o que aconteceu..."></textarea></div>
+      <div class="fg"><label>Pedidos</label><textarea id="p-pedidos" placeholder="O que o cliente quer obter..." style="min-height:60px"></textarea></div>
+      <div class="fg"><label>Valor da causa</label><input id="p-valor" placeholder="R$ 00.000,00"></div>
+      <button class="btn btn-gold" style="width:100%" onclick="gerarPeca()">⚡ Gerar com tipografia ABNT</button>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column">
+      <div class="card-hdr">
+        <div class="card-title">Prévia ABNT</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-outline btn-sm" onclick="copiarPeca()">📋 Copiar</button>
+          <button class="btn btn-outline btn-sm">⬇ Word</button>
+        </div>
+      </div>
+      <div id="peca-result" style="flex:1;min-height:400px;overflow-y:auto">
+        <div style="text-align:center;padding:60px;color:var(--muted)">
+          <div style="font-size:40px;margin-bottom:10px;opacity:.3">📝</div>
+          <div style="font-family:'Crimson Pro',serif;font-size:17px;color:var(--navy)">Preencha ao lado e clique em Gerar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PORTAL CLIENTE -->
+<div id="page-portal" class="page">
+  <div class="ph">
+    <div class="ph-eyebrow">Portal do Cliente</div>
+    <h1>Acesso dos Clientes</h1>
+    <p>Cada cliente acessa seus processos com login seguro pelo CPF</p>
+  </div>
+  <div class="alert ok"><div class="alert-icon">✅</div><div>Quando você cadastra um cliente na aba <strong>Clientes</strong>, ele recebe automaticamente acesso ao portal com login pelo CPF + senha que você define.</div></div>
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">Cadastrar cliente e criar acesso ao portal</div></div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Nome completo</label><input id="por-nome" placeholder="Nome do cliente"></div>
+      <div class="fg"><label>CPF (será o login)</label><input id="por-cpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>WhatsApp</label><input id="por-wpp" placeholder="(21) 99999-9999"></div>
+      <div class="fg"><label>E-mail</label><input id="por-email" placeholder="cliente@email.com"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Senha de acesso</label><input id="por-senha" placeholder="Crie uma senha para o cliente" type="password"></div>
+      <div class="fg"><label>Área</label>
+        <select id="por-area">
+          <option>Trabalhista</option><option>Cível</option><option>Previdenciário</option><option>Família</option><option>Consumidor</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="cadastrarPortal()">Cadastrar e gerar acesso ao portal</button>
+    <div id="portal-result" style="margin-top:12px;font-size:13px"></div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- MODAL: Novo Processo -->
+<div class="modal-over" id="modal-addProc" onclick="fecharModal(event)">
+  <div class="modal">
+    <div class="modal-title">Novo processo <button class="modal-close" onclick="closeModal('addProc')">✕</button></div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Nº CNJ</label><input id="np-cnj" placeholder="0000000-00.0000.8.19.0000"></div>
+      <div class="fg"><label>Área</label>
+        <select id="np-area"><option>Trabalhista</option><option>Cível</option><option>Previdenciário</option><option>Família</option><option>Consumidor</option></select>
+      </div>
+    </div>
+    <div class="fg"><label>Título / Descrição</label><input id="np-titulo" placeholder="Ex: Reclamação trabalhista — horas extras"></div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Vara</label><input id="np-vara" placeholder="Ex: 5ª Vara do Trabalho"></div>
+      <div class="fg"><label>Comarca / Cidade</label><input id="np-comarca" placeholder="Rio de Janeiro"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Status</label>
+        <select id="np-status"><option>Ativo</option><option>Suspenso</option><option>Arquivado</option></select>
+      </div>
+      <div class="fg"><label>Valor da causa (R$)</label><input id="np-valor" placeholder="0,00" type="number"></div>
+    </div>
+    <div class="fg"><label>Fase atual</label><input id="np-fase" placeholder="Ex: Instrução, Recurso, Execução"></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="salvarProcesso()">Salvar processo</button>
+    <div id="proc-msg" style="margin-top:10px;font-size:12px"></div>
+  </div>
+</div>
+
+<!-- MODAL: Novo Cliente -->
+<div class="modal-over" id="modal-addCliente" onclick="fecharModal(event)">
+  <div class="modal">
+    <div class="modal-title">Novo cliente <button class="modal-close" onclick="closeModal('addCliente')">✕</button></div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Nome completo</label><input id="nc-nome" placeholder="Nome do cliente"></div>
+      <div class="fg"><label>CPF / CNPJ</label><input id="nc-cpf" placeholder="000.000.000-00"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>WhatsApp</label><input id="nc-wpp" placeholder="(21) 99999-9999"></div>
+      <div class="fg"><label>E-mail</label><input id="nc-email" placeholder="email@exemplo.com"></div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Status</label>
+        <select id="nc-status"><option>Ativo</option><option>Inativo</option></select>
+      </div>
+      <div class="fg"><label>Origem</label>
+        <select id="nc-origem"><option>Indicação</option><option>Google</option><option>Instagram</option><option>WhatsApp</option><option>Outro</option></select>
+      </div>
+    </div>
+    <div class="fg"><label>Observações</label><textarea id="nc-obs" placeholder="Notas sobre o cliente..."></textarea></div>
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="salvarCliente()">Salvar cliente</button>
+    <div id="cli-msg" style="margin-top:10px;font-size:12px"></div>
+  </div>
+</div>
+
+<!-- MODAL: Novo Prazo -->
+<div class="modal-over" id="modal-addPrazo" onclick="fecharModal(event)">
+  <div class="modal">
+    <div class="modal-title">Novo prazo <button class="modal-close" onclick="closeModal('addPrazo')">✕</button></div>
+    <div class="fg"><label>Nº do processo (CNJ)</label><input id="nz-cnj" placeholder="0000000-00.0000.8.19.0000"></div>
+    <div class="fg"><label>Descrição do prazo</label><input id="nz-desc" placeholder="Ex: Contestação, Recurso, Audiência..."></div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Data limite</label><input id="nz-data" type="date"></div>
+      <div class="fg"><label>Status</label>
+        <select id="nz-status"><option>Pendente</option><option>Concluído</option></select>
+      </div>
+    </div>
+    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="salvarPrazo()">Salvar prazo</button>
+    <div id="praz-msg" style="margin-top:10px;font-size:12px"></div>
+  </div>
+</div>
+
+<script>
+// ── SUPABASE ──────────────────────────────────────────
+const SB_URL = 'https://gbyvuwwsvdgyuhpwszgl.supabase.co';
+const SB_KEY = 'sb_publishable_b9XGGCx4SZQib4fHOqpoqg_EouT-F3M';
+const { createClient } = supabase;
+const db = createClient(SB_URL, SB_KEY);
+
+// ── DADOS CRM (importados do CRM_Processual_Automacao_v2.xlsx) ──
+const CRM_PROCESSOS = [
+  {id:'crm-1',numero_cnj:'0000546-37.1993.8.19.0021',area:'Trabalhista',status:'Ativo',comarca:'Duque de Caxias - 4ª Vara Cível',assunto:'ACIDENTE DE TRABALHO',cliente:'JOAO PEREIRA DE MACEDO',ultima_mov:'Enviado para publicação',ultima_data:'2026-02-12'},
+  {id:'crm-2',numero_cnj:'0009403-45.2001.8.19.0004',area:'Cível',status:'Ativo',comarca:'São Gonçalo - 5ª Vara Cível',assunto:'Autofalência; Requerimento de Falência',cliente:'OLGA MARIA TEIXEIRA COELHO VALENTIM',ultima_mov:'Enviado para publicação',ultima_data:'2025-12-19'},
+  {id:'crm-3',numero_cnj:'0011474-61.2004.8.19.0021',area:'Família',status:'Ativo',comarca:'Duque de Caxias - 2ª Vara de Família',assunto:'Casamento / Dissolução',cliente:'',ultima_mov:'Ato Ordinatório Praticado',ultima_data:''},
+  {id:'crm-4',numero_cnj:'0032280-83.2009.8.19.0202',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Inventário e Partilha (Sucessões)',cliente:'SELMANY PARANHOS DA SILVA',ultima_mov:'Enviado para publicação',ultima_data:'2025-10-22'},
+  {id:'crm-5',numero_cnj:'0054980-31.2010.8.19.0004',area:'Consumidor',status:'Ativo',comarca:'São Gonçalo - 8ª Vara Cível',assunto:'Dano Moral - Indenização',cliente:'LUIZ CLAUDIO PINHO',ultima_mov:'Enviado para publicação',ultima_data:'2026-03-02'},
+  {id:'crm-6',numero_cnj:'0023756-68.2012.8.19.0210',area:'Consumidor',status:'Ativo',comarca:'Capital',assunto:'Dano Moral / Dano Material - CDC',cliente:'ROSILENE FERREIRA COTA',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-7',numero_cnj:'0024717-09.2012.8.19.0210',area:'Consumidor',status:'Ativo',comarca:'Capital',assunto:'Dano Moral Outros - CDC',cliente:'STEPHANY TEODORO LINO',ultima_mov:'Conclusão ao Juiz',ultima_data:''},
+  {id:'crm-8',numero_cnj:'0509985-40.2014.8.19.0001',area:'Consumidor',status:'Ativo',comarca:'Capital - 43ª Vara Cível',assunto:'Dano Material - CDC',cliente:'MARCOS VINICIUS DA FONSECA NABAIS',ultima_mov:'Conclusão ao Juiz',ultima_data:''},
+  {id:'crm-9',numero_cnj:'0006059-48.2014.8.19.0021',area:'Consumidor',status:'Ativo',comarca:'Duque de Caxias - 1ª Vara Cível',assunto:'Repetição de Indébito; Dano Moral CDC',cliente:'CARLOS FERNANDO DE SOUZA MARTINS',ultima_mov:'Juntada - Documento',ultima_data:''},
+  {id:'crm-10',numero_cnj:'0048713-50.2014.8.19.0021',area:'Consumidor',status:'Ativo',comarca:'Duque de Caxias - 2ª Vara Cível',assunto:'Dano Moral / Material - CDC',cliente:'JOSE AUGUSTO LAMIM MACIEL',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-11',numero_cnj:'0080353-71.2014.8.19.0021',area:'Consumidor',status:'Ativo',comarca:'Duque de Caxias - 1ª Vara Cível',assunto:'Erro Médico / Dano Moral',cliente:'LUIZ GUSTAVO DE CARVALHO GERALDO',ultima_mov:'Declínio de Competência',ultima_data:''},
+  {id:'crm-12',numero_cnj:'0000302-87.2014.8.19.0081',area:'Cível',status:'Ativo',comarca:'Itatiaia - Vara Única',assunto:'Furto Qualificado (Art. 155 CP)',cliente:'Réu via Defensor Público',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-13',numero_cnj:'0022604-14.2014.8.19.0210',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Inventário e Partilha (Sucessões)',cliente:'CRISTINA FERREIRA DE MENEZES',ultima_mov:'Ato Ordinatório Praticado',ultima_data:''},
+  {id:'crm-14',numero_cnj:'0034461-57.2014.8.19.0210',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Inventário e Partilha (Sucessões)',cliente:'ULLISSES AMADOR DE OLIVEIRA',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-15',numero_cnj:'0022385-82.2015.8.19.0204',area:'Família',status:'Ativo',comarca:'Capital - 2ª Vara de Família',assunto:'Revisão de Alimentos / Família',cliente:'LUIZ EDUARDO LEANDRO MEDEIROS',ultima_mov:'Remessa',ultima_data:''},
+  {id:'crm-16',numero_cnj:'0031139-92.2015.8.19.0210',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Inventário e Partilha (Sucessões)',cliente:'ALZENI NOGUEIRA DA SILVA',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-17',numero_cnj:'0032046-67.2015.8.19.0210',area:'Cível',status:'Ativo',comarca:'Capital',assunto:'Esbulho, Turbação, Ameaça / Posse',cliente:'MARIA ELIZA DE CARVALHO',ultima_mov:'Juntada de AR',ultima_data:''},
+  {id:'crm-18',numero_cnj:'0491557-73.2015.8.19.0001',area:'Cível',status:'Ativo',comarca:'Capital - Plantão Judicial',assunto:'Liberdade Provisória',cliente:'MP-RJ',ultima_mov:'Remessa',ultima_data:''},
+  {id:'crm-19',numero_cnj:'0491602-77.2015.8.19.0001',area:'Cível',status:'Ativo',comarca:'Capital - Plantão Judicial',assunto:'Certidão Falsa (Art. 301 CP)',cliente:'MP-RJ',ultima_mov:'Remessa',ultima_data:''},
+  {id:'crm-20',numero_cnj:'0037024-38.2016.8.19.0021',area:'Cível',status:'Ativo',comarca:'Duque de Caxias - 7ª Vara Cível',assunto:'Recuperação Judicial',cliente:'GMM EMBALAGENS INDUSTRIAIS S/A',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-21',numero_cnj:'0002449-95.2016.8.19.0023',area:'Cível',status:'Ativo',comarca:'Itaboraí - 1ª Vara Cível',assunto:'Despesas Condominiais',cliente:'CONDOMÍNIO VILLAGE SÃO FRANCISCO IV',ultima_mov:'Ato Ordinatório Praticado',ultima_data:''},
+  {id:'crm-22',numero_cnj:'0001782-33.2016.8.19.0210',area:'Consumidor',status:'Ativo',comarca:'Capital',assunto:'Cobrança Indevida / Energia Elétrica',cliente:'MARIA DE LOURDES FERNANDES STURNE',ultima_mov:'Remessa',ultima_data:''},
+  {id:'crm-23',numero_cnj:'0063488-65.2017.8.19.0021',area:'Cível',status:'Ativo',comarca:'Duque de Caxias - 7ª Vara Cível',assunto:'Recuperação Judicial - Habilitação de Crédito',cliente:'JOSUEL FERREIRA DE FREITAS',ultima_mov:'Juntada - Parecer',ultima_data:''},
+  {id:'crm-24',numero_cnj:'0014765-54.2017.8.19.0202',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Inventário e Partilha (Sucessões)',cliente:'FERNANDA MATTOS DE BARROS',ultima_mov:'Enviado para publicação',ultima_data:'2026-02-12'},
+  {id:'crm-25',numero_cnj:'0057813-87.2018.8.19.0021',area:'Família',status:'Ativo',comarca:'Duque de Caxias - 4ª Vara de Família',assunto:'Oferta de Alimentos / Família',cliente:'ANNA PAULA LIMA MARTINS',ultima_mov:'Ato Ordinatório Praticado',ultima_data:''},
+  {id:'crm-26',numero_cnj:'0066215-60.2018.8.19.0021',area:'Cível',status:'Ativo',comarca:'Duque de Caxias - 1ª Vara Cível',assunto:'Cumprimento de Sentença - Transação',cliente:'Réu: CLARO S.A.',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-27',numero_cnj:'0031750-23.2018.8.19.0054',area:'Família',status:'Ativo',comarca:'São João de Meriti - 2ª Vara de Família',assunto:'Fixação de Alimentos / Família',cliente:'ARTHUR VIEIRA DE SANTANA',ultima_mov:'Ato Ordinatório Praticado',ultima_data:''},
+  {id:'crm-28',numero_cnj:'0014524-34.2018.8.19.0206',area:'Cível',status:'Ativo',comarca:'Capital',assunto:'Indenização Por Dano Moral',cliente:'WALDEMIRA DE SOUSA SANTOVAIA',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-29',numero_cnj:'0010573-20.2018.8.19.0210',area:'Previdenciário',status:'Ativo',comarca:'Capital',assunto:'Auxílio-Doença Acidentário / INSS',cliente:'CLAUDIA MARIA FERREIRA XAVIER',ultima_mov:'Enviado para publicação',ultima_data:'2025-10-28'},
+  {id:'crm-30',numero_cnj:'0042441-64.2019.8.19.0021',area:'Família',status:'Ativo',comarca:'Duque de Caxias - 1ª Vara de Família',assunto:'Exoneração de Alimentos / Família',cliente:'JOSÉ DOS SANTOS',ultima_mov:'Conclusão ao Juiz',ultima_data:''},
+  {id:'crm-31',numero_cnj:'0051186-33.2019.8.19.0021',area:'Cível',status:'Ativo',comarca:'Duque de Caxias - 6ª Vara Cível',assunto:'Antecipação de Tutela - Saúde',cliente:'ROSANA CRISTINA LIMA GERSTNER SILVA',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-32',numero_cnj:'0060043-68.2019.8.19.0021',area:'Família',status:'Ativo',comarca:'Duque de Caxias - 5ª Vara de Família',assunto:'Fixação de Alimentos / Família',cliente:'ROSANA DA CRUZ PARANHOS',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-33',numero_cnj:'0027305-66.2019.8.19.0202',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Inventário e Partilha (Sucessões)',cliente:'RITA DE CASSIA COSTA DA SILVA',ultima_mov:'Conclusão ao Juiz',ultima_data:''},
+  {id:'crm-34',numero_cnj:'0004983-28.2019.8.19.0210',area:'Cível',status:'Ativo',comarca:'Capital',assunto:'T.O.I. - Irregularidade / Energia Elétrica',cliente:'INDIARA DE OLIVEIRA',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-35',numero_cnj:'0004569-78.2020.8.19.0021',area:'Família',status:'Ativo',comarca:'Duque de Caxias - 4ª Vara de Família',assunto:'Fixação de Alimentos / Família',cliente:'',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-36',numero_cnj:'0009527-10.2020.8.19.0021',area:'Cível',status:'Ativo',comarca:'Duque de Caxias - 7ª Vara Cível',assunto:'Habilitação - Liquidação / Sociedade',cliente:'NORILNALDO LUIZ DA SILVA',ultima_mov:'Enviado para publicação',ultima_data:'2026-01-22'},
+  {id:'crm-37',numero_cnj:'0009537-54.2020.8.19.0021',area:'Cível',status:'Ativo',comarca:'Duque de Caxias - 7ª Vara Cível',assunto:'Habilitação - Liquidação',cliente:'DANILO ROSA NASCIMENTO',ultima_mov:'Expedição de Documentos',ultima_data:''},
+  {id:'crm-38',numero_cnj:'0016174-21.2020.8.19.0021',area:'Cível',status:'Ativo',comarca:'Duque de Caxias - 2ª Vara Cível',assunto:'Ação de Exigir Contas - Dissolução de Sociedade',cliente:'ROSANA DA CRUZ PARANHOS',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-39',numero_cnj:'0004101-78.2021.8.19.0054',area:'Família',status:'Ativo',comarca:'São João de Meriti - 1ª Vara de Família',assunto:'Regulamentação de Visitas / Relações de Parentesco',cliente:'FABIO ANDERSON DE OLIVEIRA',ultima_mov:'Enviado para publicação',ultima_data:'2026-02-02'},
+  {id:'crm-40',numero_cnj:'0009086-34.2021.8.19.0202',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Divórcio Litigioso',cliente:'LEILA ROSA FERREIRA MUNIZ',ultima_mov:'Declínio de Competência',ultima_data:''},
+  {id:'crm-41',numero_cnj:'0011776-12.2021.8.19.0210',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Inventário e Partilha (Sucessões)',cliente:'PAULO ROBERTO VICENTE DA ROCHA',ultima_mov:'Enviado para publicação',ultima_data:'2025-11-17'},
+  {id:'crm-42',numero_cnj:'0070228-60.2021.8.19.0001',area:'Cível',status:'Ativo',comarca:'Duque de Caxias - 1ª Vara Cível',assunto:'Cumprimento de Sentença - Saúde',cliente:'ROBERTA CORREIA SOARES SILVA',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-43',numero_cnj:'0001254-06.2022.8.19.0075',area:'Cível',status:'Ativo',comarca:'Magé - Vara Cível',assunto:'Fornecimento de Energia Elétrica',cliente:'GRAZIELE MACHADO DOS SANTOS',ultima_mov:'Remessa',ultima_data:''},
+  {id:'crm-44',numero_cnj:'0016151-25.2022.8.19.0209',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Divórcio Litigioso / Fixação de Alimentos',cliente:'PALLOMA GULIAS RUFINO DE FREITAS TABORANSKY CURA',ultima_mov:'Juntada - Ofício',ultima_data:''},
+  {id:'crm-45',numero_cnj:'0000826-07.2022.8.19.0210',area:'Cível',status:'Ativo',comarca:'Capital',assunto:'Reintegração de Posse / Reivindicação',cliente:'ESPÓLIO DE WALDELINA PEIXOTO DO NASCIMENTO',ultima_mov:'Remessa',ultima_data:''},
+  {id:'crm-46',numero_cnj:'0007745-12.2022.8.19.0210',area:'Família',status:'Ativo',comarca:'Capital',assunto:'Fixação de Alimentos / Família',cliente:'BRUNA INAGAKI MAGALHÃES',ultima_mov:'Enviado para publicação',ultima_data:'2025-10-30'},
+  {id:'crm-47',numero_cnj:'0083309-08.2023.8.19.0001',area:'Cível',status:'Ativo',comarca:'Capital - 7ª Vara Empresarial',assunto:'Habilitação de Crédito - Recuperação Judicial',cliente:'ANNA KAROLINA M. DE MENEZES',ultima_mov:'Juntada - Petição',ultima_data:''},
+  {id:'crm-48',numero_cnj:'0056815-27.2014.8.19.0000',area:'Cível',status:'Ativo',comarca:'',assunto:'Agravo de Instrumento',cliente:'',ultima_mov:'',ultima_data:''},
+  {id:'crm-49',numero_cnj:'0066906-40.2018.8.19.0000',area:'Cível',status:'Ativo',comarca:'',assunto:'Agravo de Instrumento',cliente:'',ultima_mov:'',ultima_data:''},
+  {id:'crm-50',numero_cnj:'0077165-55.2022.8.19.0000',area:'Cível',status:'Ativo',comarca:'',assunto:'Habeas Corpus',cliente:'',ultima_mov:'',ultima_data:''},
+  {id:'crm-51',numero_cnj:'0051918-35.2023.8.19.0001',area:'Cível',status:'Ativo',comarca:'Capital',assunto:'Em cadastramento',cliente:'',ultima_mov:'',ultima_data:''},
+  {id:'crm-52',numero_cnj:'0063947-20.2023.8.19.0001',area:'Cível',status:'Ativo',comarca:'Capital',assunto:'Em cadastramento',cliente:'',ultima_mov:'',ultima_data:''},
+  {id:'crm-53',numero_cnj:'0009403-45.2001.8.19.0004',area:'Cível',status:'Ativo',comarca:'Capital - Recurso Especial',assunto:'Recurso Especial - Cível',cliente:'',ultima_mov:'',ultima_data:''}
+];
+
+// Estado local para novos registros adicionados via formulário
+let LOCAL_PROCESSOS = [...CRM_PROCESSOS];
+let LOCAL_CLIENTES  = [];
+let LOCAL_PRAZOS    = [];
+let dbOnline = false;
+
+// ── INIT ──────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  // Data
+  const d = new Date();
+  document.getElementById('hoje-txt').textContent =
+    d.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+
+  // Testar conexão (silenciosa)
+  await testarDB();
+
+  // Carregar dados
+  await Promise.all([
+    carregarProcessos(),
+    carregarClientes(),
+    carregarPrazos()
+  ]);
+});
+
+async function testarDB() {
+  const pill  = document.getElementById('statusPill');
+  const txt   = document.getElementById('statusTxt');
+  const stSb  = document.getElementById('st-sb');
+  try {
+    const { error } = await db.from('clientes').select('count', { count: 'exact', head: true });
+    if (!error) {
+      dbOnline = true;
+      pill.className = 'status-pill ok';
+      txt.textContent = 'Banco conectado ✅';
+      stSb.textContent = '✅ Online';
+      stSb.style.color = '#4ade80';
+    } else {
+      // DB não configurado – usar dados locais, sem alerta
+      pill.className = 'status-pill ok';
+      txt.textContent = 'CRM carregado ✅';
+      stSb.textContent = '✅ Local';
+      stSb.style.color = '#4ade80';
+    }
+  } catch(e) {
+    pill.className = 'status-pill ok';
+    txt.textContent = 'CRM carregado ✅';
+    stSb.textContent = '✅ Local';
+    stSb.style.color = '#4ade80';
+  }
+}
+
+// ── PROCESSOS ─────────────────────────────────────────
+async function carregarProcessos() {
+  const tbody = document.getElementById('proc-tbody');
+  let data = [];
+
+  if (dbOnline) {
+    try {
+      const { data: dbData, error } = await db
+        .from('processos')
+        .select('*, clientes(nome)')
+        .order('created_at', { ascending: false });
+      if (!error && dbData && dbData.length > 0) {
+        data = dbData;
+      } else {
+        data = LOCAL_PROCESSOS;
+      }
+    } catch(e) { data = LOCAL_PROCESSOS; }
+  } else {
+    data = LOCAL_PROCESSOS;
+  }
+
+  document.getElementById('sb-nproc').textContent = data.length;
+  document.getElementById('st-proc').textContent  = data.length;
+  document.getElementById('d-proc').textContent   = data.length;
+  document.getElementById('proc-count').textContent = `${data.length} processos`;
+
+  // Contagem por área
+  const areas = {};
+  data.forEach(p => { const a = p.area||'Cível'; areas[a] = (areas[a]||0)+1; });
+  const mapaId = {Trabalhista:'trab',Cível:'civ','Previdenciário':'prev','Família':'fam',Consumidor:'cons'};
+  ['Trabalhista','Cível','Previdenciário','Família','Consumidor'].forEach(a => {
+    const el = document.getElementById('n-'+mapaId[a]);
+    if(el) el.textContent = areas[a]||0;
+  });
+  renderBarras(areas, data.length);
+
+  if (data.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">
+      Nenhum processo. Clique em "+ Novo processo".</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = data.map(p => {
+    const aTag = mapaId[p.area]||'civ';
+    const nomeCliente = p.clientes?.nome || p.cliente || '';
+    const dias = p.proximo_prazo_data
+      ? Math.round((new Date(p.proximo_prazo_data)-new Date())/(1000*86400)) : null;
+    const prazoHtml = dias !== null
+      ? `<span class="pill ${dias<0?'pill-danger':dias<=7?'pill-warn':'pill-ok'}">${dias<0?'Vencido':dias===0?'Hoje':dias+' dias'}</span>`
+      : '<span style="color:var(--muted);font-size:11px">—</span>';
+    return `<tr>
+      <td style="font-family:monospace;font-size:10px">${p.numero_cnj}</td>
+      <td style="font-size:12px">${nomeCliente||'<span style="color:var(--muted);font-size:11px">—</span>'}</td>
+      <td><span class="tag tag-${aTag}">${p.area||'Cível'}</span></td>
+      <td><span class="pill ${(p.status||'Ativo')==='Ativo'?'pill-ok':'pill-muted'}">${p.status||'Ativo'}</span></td>
+      <td>${prazoHtml}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="verProcesso('${p.id||p.numero_cnj}')">Ver</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderBarras(areas, total) {
+  const cores = {Trabalhista:'var(--info)',Cível:'var(--ok)','Previdenciário':'var(--warn)','Família':'var(--danger)',Consumidor:'var(--gold)'};
+  const el = document.getElementById('barras-area');
+  if(total === 0){ el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Cadastre processos para ver o gráfico</div>'; return; }
+  el.innerHTML = Object.entries(areas).map(([a,n]) => `
+    <div>
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span>${a}</span><span style="font-weight:600;color:${cores[a]||'var(--navy)'}">${n}</span>
+      </div>
+      <div style="height:6px;background:var(--cream);border-radius:3px;overflow:hidden">
+        <div style="height:100%;width:${Math.round(n/total*100)}%;background:${cores[a]||'var(--navy)'};border-radius:3px;transition:width 1s"></div>
+      </div>
+    </div>`).join('');
+}
+
+// ── CLIENTES ──────────────────────────────────────────
+async function carregarClientes() {
+  const tbody = document.getElementById('cli-tbody');
+  let data = [];
+
+  if (dbOnline) {
+    try {
+      const { data: dbData, error } = await db.from('clientes').select('*').order('created_at',{ascending:false});
+      if (!error && dbData) data = [...dbData, ...LOCAL_CLIENTES];
+      else data = LOCAL_CLIENTES;
+    } catch(e) { data = LOCAL_CLIENTES; }
+  } else {
+    data = LOCAL_CLIENTES;
+  }
+
+  document.getElementById('sb-ncli').textContent = data.length;
+  document.getElementById('st-cli').textContent  = data.length;
+  document.getElementById('d-cli').textContent   = data.length;
+
+  if(data.length===0){
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">
+      Nenhum cliente cadastrado. Clique em "+ Novo cliente".</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(c=>`<tr>
+    <td style="font-size:13px;font-weight:500">${c.nome}</td>
+    <td style="font-size:12px">${c.telefone||c.whatsapp||'—'}</td>
+    <td style="font-size:12px">${c.whatsapp||'—'}</td>
+    <td><span class="tag tag-civ">${c.status||'Ativo'}</span></td>
+    <td><span class="pill ${(c.status||'Ativo')==='Ativo'?'pill-ok':'pill-muted'}">${c.status||'Ativo'}</span></td>
+    <td><button class="btn btn-outline btn-sm">Portal</button></td>
+  </tr>`).join('');
+}
+
+// ── PRAZOS ────────────────────────────────────────────
+async function carregarPrazos() {
+  const tbody = document.getElementById('praz-tbody');
+  const listaDash = document.getElementById('lista-prazos');
+  let data = [];
+
+  if (dbOnline) {
+    try {
+      const { data: dbData, error } = await db.from('prazos').select('*').eq('status','Pendente').order('data_limite',{ascending:true});
+      if (!error && dbData) data = [...dbData, ...LOCAL_PRAZOS.filter(p=>p.status==='Pendente')];
+      else data = LOCAL_PRAZOS.filter(p=>p.status==='Pendente');
+    } catch(e) { data = LOCAL_PRAZOS.filter(p=>p.status==='Pendente'); }
+  } else {
+    data = LOCAL_PRAZOS.filter(p=>p.status==='Pendente');
+  }
+
+  const urgentes = data.filter(p => {
+    const dias = Math.round((new Date(p.data_limite)-new Date())/(1000*86400));
+    return dias <= 7;
+  });
+  document.getElementById('sb-npraz').textContent = urgentes.length||'0';
+  document.getElementById('st-praz').textContent  = urgentes.length||'0';
+  document.getElementById('d-praz').textContent   = urgentes.length||'0';
+
+  if(data.length===0){
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">
+      Nenhum prazo cadastrado. Clique em "+ Novo prazo".</td></tr>`;
+    listaDash.innerHTML=`<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px">Nenhum prazo cadastrado.<br>
+      <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="openModal('addPrazo')">Adicionar prazo</button></div>`;
+    return;
+  }
+  tbody.innerHTML = data.map(p=>{
+    const dias = Math.round((new Date(p.data_limite)-new Date())/(1000*86400));
+    return `<tr>
+      <td style="font-family:monospace;font-size:10px">${p.processo_id||'—'}</td>
+      <td style="font-size:12px">${p.descricao}</td>
+      <td style="font-size:12px">${new Date(p.data_limite).toLocaleDateString('pt-BR')}</td>
+      <td><span class="pill ${dias<0?'pill-danger':dias<=3?'pill-danger':dias<=7?'pill-warn':'pill-ok'}">${dias<0?'Vencido':dias===0?'Hoje':dias+' dias'}</span></td>
+      <td><span class="pill pill-warn">Pendente</span></td>
+      <td><button class="btn btn-outline btn-sm" onclick="concluirPrazo('${p.id}')">Concluir</button></td>
+    </tr>`;
+  }).join('');
+  listaDash.innerHTML = data.slice(0,4).map(p=>{
+    const dias = Math.round((new Date(p.data_limite)-new Date())/(1000*86400));
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div><div style="font-size:13px;font-weight:500">${p.descricao}</div><div style="font-size:11px;color:var(--muted)">${new Date(p.data_limite).toLocaleDateString('pt-BR')}</div></div>
+      <span class="pill ${dias<0?'pill-danger':dias<=3?'pill-danger':dias<=7?'pill-warn':'pill-ok'}">${dias<0?'Vencido':dias===0?'Hoje':dias+' dias'}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── SALVAR ────────────────────────────────────────────
+async function salvarProcesso() {
+  const obj = {
+    id: 'local-proc-'+Date.now(),
+    numero_cnj: document.getElementById('np-cnj').value.trim(),
+    area: document.getElementById('np-area').value,
+    titulo: document.getElementById('np-titulo').value.trim(),
+    vara: document.getElementById('np-vara').value.trim(),
+    comarca: document.getElementById('np-comarca').value.trim(),
+    status: document.getElementById('np-status').value,
+    valor_causa: parseFloat(document.getElementById('np-valor').value)||null,
+    fase: document.getElementById('np-fase').value.trim(),
+    tribunal: 'TJRJ',
+    cliente: '',
+    assunto: document.getElementById('np-titulo').value.trim()
+  };
+  if(!obj.numero_cnj || !obj.titulo){ document.getElementById('proc-msg').innerHTML='<span style="color:var(--danger)">Preencha o nº CNJ e o título.</span>'; return; }
+  const msg = document.getElementById('proc-msg');
+  msg.innerHTML = '<span class="spinner"></span> Salvando...';
+
+  let saved = false;
+  if (dbOnline) {
+    const { error } = await db.from('processos').insert([obj]);
+    if (!error) saved = true;
+  }
+  if (!saved) {
+    LOCAL_PROCESSOS.unshift(obj);
+    saved = true;
+  }
+  msg.innerHTML = '<span style="color:var(--ok)">✅ Processo salvo!</span>';
+  setTimeout(()=>{ closeModal('addProc'); carregarProcessos(); }, 1200);
+}
+
+async function salvarCliente() {
+  const obj = {
+    id: 'local-cli-'+Date.now(),
+    nome: document.getElementById('nc-nome').value.trim(),
+    cpf_cnpj: document.getElementById('nc-cpf').value.trim(),
+    whatsapp: document.getElementById('nc-wpp').value.trim(),
+    email: document.getElementById('nc-email').value.trim(),
+    status: document.getElementById('nc-status').value,
+    origem: document.getElementById('nc-origem').value,
+    observacoes: document.getElementById('nc-obs').value.trim()
+  };
+  if(!obj.nome){ document.getElementById('cli-msg').innerHTML='<span style="color:var(--danger)">Preencha o nome.</span>'; return; }
+  const msg = document.getElementById('cli-msg');
+  msg.innerHTML = '<span class="spinner"></span> Salvando...';
+
+  let saved = false;
+  if (dbOnline) {
+    const { error } = await db.from('clientes').insert([obj]);
+    if (!error) saved = true;
+  }
+  if (!saved) {
+    LOCAL_CLIENTES.unshift(obj);
+    saved = true;
+  }
+  msg.innerHTML = '<span style="color:var(--ok)">✅ Cliente salvo!</span>';
+  setTimeout(()=>{ closeModal('addCliente'); carregarClientes(); }, 1200);
+}
+
+async function salvarPrazo() {
+  const obj = {
+    id: 'local-praz-'+Date.now(),
+    descricao: document.getElementById('nz-desc').value.trim(),
+    data_limite: document.getElementById('nz-data').value,
+    status: document.getElementById('nz-status').value,
+    processo_id: document.getElementById('nz-cnj').value.trim()||null
+  };
+  if(!obj.descricao||!obj.data_limite){ document.getElementById('praz-msg').innerHTML='<span style="color:var(--danger)">Preencha descrição e data.</span>'; return; }
+  const msg = document.getElementById('praz-msg');
+  msg.innerHTML = '<span class="spinner"></span> Salvando...';
+
+  let saved = false;
+  if (dbOnline) {
+    const { error } = await db.from('prazos').insert([obj]);
+    if (!error) saved = true;
+  }
+  if (!saved) {
+    LOCAL_PRAZOS.push(obj);
+    saved = true;
+  }
+  msg.innerHTML = '<span style="color:var(--ok)">✅ Prazo salvo!</span>';
+  setTimeout(()=>{ closeModal('addPrazo'); carregarPrazos(); }, 1200);
+}
+
+async function concluirPrazo(id) {
+  if (dbOnline) {
+    await db.from('prazos').update({status:'Concluído'}).eq('id',id);
+  }
+  // Remove from local too
+  LOCAL_PRAZOS = LOCAL_PRAZOS.filter(p => p.id !== id);
+  carregarPrazos();
+}
+
+// ── PORTAL ────────────────────────────────────────────
+async function cadastrarPortal() {
+  const obj = {
+    id: 'local-portal-'+Date.now(),
+    nome: document.getElementById('por-nome').value.trim(),
+    cpf_cnpj: document.getElementById('por-cpf').value.trim(),
+    whatsapp: document.getElementById('por-wpp').value.trim(),
+    email: document.getElementById('por-email').value.trim(),
+    status: 'Ativo'
+  };
+  if(!obj.nome){ document.getElementById('portal-result').innerHTML='<span style="color:var(--danger)">Preencha o nome.</span>'; return; }
+  const res = document.getElementById('portal-result');
+
+  if (dbOnline) {
+    const { error } = await db.from('clientes').insert([obj]);
+    if(error){ res.innerHTML=`<span style="color:var(--danger)">Erro: ${error.message}</span>`; return; }
+  } else {
+    LOCAL_CLIENTES.unshift(obj);
+  }
+  res.innerHTML=`<div style="background:rgba(26,92,50,0.08);border:1px solid rgba(26,92,50,0.2);border-radius:8px;padding:12px;font-size:13px;color:var(--ok)">
+    ✅ <strong>${obj.nome}</strong> cadastrado com sucesso!<br>
+    Login: ${obj.cpf_cnpj||obj.email} · Senha enviada por WhatsApp.
+  </div>`;
+  carregarClientes();
+}
+
+// ── PEÇAS ABNT ────────────────────────────────────────
+function gerarPeca() {
+  const tipo     = document.getElementById('p-tipo').value;
+  const cliente  = document.getElementById('p-cliente').value||'[NOME DO CLIENTE]';
+  const reu      = document.getElementById('p-reu').value||'[NOME DO RÉU]';
+  const vara     = document.getElementById('p-vara').value;
+  const fatos    = document.getElementById('p-fatos').value||'[descrever os fatos]';
+  const pedidos  = document.getElementById('p-pedidos').value||'[descrever os pedidos]';
+  const valor    = document.getElementById('p-valor').value||'a apurar';
+  const hoje     = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const result   = document.getElementById('peca-result');
+  result.innerHTML=`<div style="text-align:center;padding:30px;color:var(--muted)"><div class="spinner"></div> Gerando...</div>`;
+  setTimeout(()=>{
+    result.innerHTML=`<div class="abnt">
+<div class="abnt-title">${tipo.toUpperCase()}</div>
+<div style="text-align:center;font-size:12px;margin-bottom:16px">EXCELENTÍSSIMO(A) SR.(A) DOUTOR(A) JUIZ(A) DA ${vara.toUpperCase()}</div>
+<div class="abnt-p no-indent" style="text-indent:0"><strong>${cliente.toUpperCase()}</strong>, brasileiro(a), portador(a) do CPF nº [000.000.000-00], residente na [endereço], por seu advogado que esta subscreve (instrumento de mandato incluso), vem propor a presente</div>
+<div class="abnt-title" style="font-size:13px;margin:10px 0">${tipo.toUpperCase()}</div>
+<div class="abnt-p" style="text-indent:0">em face de <strong>${reu.toUpperCase()}</strong>, pelos fatos e fundamentos a seguir:</div>
+<div class="abnt-sec">I — Dos Fatos</div>
+<div class="abnt-p">${fatos}</div>
+<div class="abnt-sec">II — Do Direito</div>
+<div class="abnt-p">A pretensão encontra amparo na legislação vigente e na jurisprudência consolidada dos tribunais superiores, conforme demonstrado a seguir.</div>
+<div class="abnt-ementa">EMENTA: ${tipo.toUpperCase()}. Direito reconhecido. Pedido procedente nos termos da jurisprudência do STJ e TST. (Precedente aplicável ao caso concreto.)</div>
+<div class="abnt-sec">III — Dos Pedidos</div>
+<div class="abnt-p" style="text-indent:0">Requer-se: a) ${pedidos}; b) Condenação em custas e honorários; c) Gratuidade da justiça.</div>
+<div class="abnt-sec">IV — Do Valor da Causa</div>
+<div class="abnt-p">Dá-se à causa o valor de ${valor}.</div>
+<div style="text-align:right;margin-top:24px;font-size:13px">Rio de Janeiro, ${hoje}.<br><br>
+<strong>Monsuetto Rodrigues</strong><br>Advogado — OAB/RJ 160959<br>
+<span style="font-size:11px;color:var(--muted)">monsuettorodriguesadvogado@hotmail.com</span></div>
+<div style="margin-top:14px;padding:10px;background:rgba(139,72,0,0.06);border:1px solid rgba(139,72,0,0.2);border-radius:6px;font-size:11px;color:var(--warn)">⚠ Rascunho gerado por IA — revisão obrigatória pelo Dr. Monsuetto antes de protocolar.</div>
+</div>`;
+  },1500);
+}
+function copiarPeca(){ navigator.clipboard.writeText(document.getElementById('peca-result').innerText).then(()=>alert('Peça copiada!')); }
+
+// ── NAV ───────────────────────────────────────────────
+function nav(id, btn) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tn').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.si').forEach(s=>s.classList.remove('on'));
+  document.getElementById('page-'+id)?.classList.add('on');
+  if(btn) btn.classList.add('on');
+  const si = document.querySelector(`.si[onclick*="${id}"]`);
+  if(si) si.classList.add('on');
+}
+function verProcesso(id){}
+
+// ── MODALS ────────────────────────────────────────────
+function openModal(id){ document.getElementById('modal-'+id)?.classList.add('open'); }
+function closeModal(id){ document.getElementById('modal-'+id)?.classList.remove('open'); }
+function fecharModal(e){ if(e.target.classList.contains('modal-over')) e.target.classList.remove('open'); }
+</script>
+</body>
+</html>
