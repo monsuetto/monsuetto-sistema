@@ -168,6 +168,8 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
     <button class="tn" onclick="nav('processos',this)">Processos</button>
     <button class="tn" onclick="nav('clientes',this)">Clientes</button>
     <button class="tn" onclick="nav('prazos',this)">Prazos</button>
+    <button class="tn" onclick="nav('financeiro',this)">💰 Financeiro</button>
+    <button class="tn" onclick="nav('datajud',this)">⚖️ DataJud CNJ</button>
     <button class="tn" onclick="nav('pecas',this)">Peças ABNT</button>
     <button class="tn" onclick="nav('portal',this)">Portal Cliente</button>
   </nav>
@@ -191,6 +193,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
   <div class="sb-sec">
     <div class="sb-lbl">Ferramentas</div>
     <div class="si" onclick="nav('pecas')"><span class="si-icon">📝</span>Peças ABNT</div>
+    <div class="si" onclick="nav('financeiro')"><span class="si-icon">💰</span>Financeiro</div>
     <div class="si" onclick="nav('portal')"><span class="si-icon">📱</span>Portal Cliente</div>
   </div>
   <div class="sb-sec">
@@ -284,6 +287,9 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
   <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="openModal('addProc')">+ Novo processo</button>
     <button class="btn btn-outline" onclick="carregarProcessos()">↻ Atualizar</button>
+    <input id="proc-search" type="text" placeholder="🔍 Buscar por CNJ, cliente ou área..."
+      style="flex:1;min-width:200px;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none"
+      oninput="filtrarProcessos(this.value)">
   </div>
   <div class="card">
     <div class="card-hdr">
@@ -315,13 +321,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
     <h1>Clientes</h1>
     <p>Cadastro completo com acesso ao portal</p>
   </div>
-  <div style="display:flex;gap:10px;margin-bottom:16px">
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
     <button class="btn btn-primary" onclick="openModal('addCliente')">+ Novo cliente</button>
     <button class="btn btn-outline" onclick="carregarClientes()">↻ Atualizar</button>
+    <input id="cli-search" type="text" placeholder="🔍 Buscar por nome, CPF ou WhatsApp..." 
+      style="flex:1;min-width:200px;padding:9px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none"
+      oninput="filtrarClientes(this.value)">
   </div>
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">Clientes cadastrados</div>
+      <span id="cli-count" style="font-size:12px;color:var(--muted)">carregando...</span>
     </div>
     <div style="overflow-x:auto">
       <table class="tbl">
@@ -416,6 +426,168 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 </div>
 
 <!-- PORTAL CLIENTE -->
+<!-- FINANCEIRO -->
+<div id="page-financeiro" class="page">
+  <div class="ph">
+    <div class="ph-eyebrow">Gestão Financeira</div>
+    <h1>Financeiro</h1>
+    <p>Honorários, pagamentos, despesas e recibos por cliente</p>
+  </div>
+
+  <!-- Stats financeiro -->
+  <div class="stats" style="grid-template-columns:repeat(4,1fr)">
+    <div class="stat">
+      <div class="stat-val" id="fin-receber">R$ 0</div>
+      <div class="stat-lbl">A Receber</div>
+      <div class="stat-note" style="color:var(--warn)">Honorários em aberto</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="fin-recebido">R$ 0</div>
+      <div class="stat-lbl">Recebido no Mês</div>
+      <div class="stat-note" style="color:var(--ok)" id="fin-mes">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="fin-inadim">0</div>
+      <div class="stat-lbl">Inadimplentes</div>
+      <div class="stat-note" style="color:var(--danger)">Clientes em atraso</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val" id="fin-despesas">R$ 0</div>
+      <div class="stat-lbl">Despesas</div>
+      <div class="stat-note" style="color:var(--muted)">Custas e gastos</div>
+    </div>
+  </div>
+
+  <div class="g2">
+    <!-- Novo lançamento -->
+    <div class="card">
+      <div class="card-hdr"><div class="card-title">+ Novo Lançamento</div></div>
+      <div class="fg"><label>Tipo</label>
+        <select id="fin-tipo">
+          <option value="honorario">Honorário</option>
+          <option value="parcela">Parcela mensal</option>
+          <option value="exito">Êxito (%)</option>
+          <option value="despesa">Despesa processual</option>
+          <option value="reembolso">Reembolso de custas</option>
+        </select>
+      </div>
+      <div class="fg"><label>Cliente</label>
+        <input id="fin-cliente" placeholder="Nome do cliente" list="fin-clientes-list">
+        <datalist id="fin-clientes-list"></datalist>
+      </div>
+      <div class="fg"><label>Processo (CNJ)</label>
+        <input id="fin-cnj" placeholder="0000000-00.0000.8.19.0000">
+      </div>
+      <div class="form-row" style="margin-bottom:12px">
+        <div class="fg"><label>Valor (R$)</label>
+          <input id="fin-valor" type="number" placeholder="0,00" step="0.01">
+        </div>
+        <div class="fg"><label>Vencimento</label>
+          <input id="fin-venc" type="date">
+        </div>
+      </div>
+      <div class="form-row" style="margin-bottom:12px">
+        <div class="fg"><label>Status</label>
+          <select id="fin-status">
+            <option value="pendente">Pendente</option>
+            <option value="pago">Pago</option>
+            <option value="atrasado">Atrasado</option>
+            <option value="parcelado">Parcelado</option>
+          </select>
+        </div>
+        <div class="fg"><label>Data pagamento</label>
+          <input id="fin-datapag" type="date">
+        </div>
+      </div>
+      <div class="fg"><label>Observações</label>
+        <textarea id="fin-obs" placeholder="Detalhes do lançamento..." style="min-height:50px"></textarea>
+      </div>
+      <button class="btn btn-primary" style="width:100%" onclick="salvarFinanceiro()">💾 Salvar lançamento</button>
+      <div id="fin-msg" style="margin-top:10px;font-size:12px"></div>
+    </div>
+
+    <!-- Resumo por cliente -->
+    <div class="card">
+      <div class="card-hdr">
+        <div class="card-title">Resumo por Cliente</div>
+        <input type="text" placeholder="🔍 Buscar cliente..." id="fin-busca"
+          style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:160px"
+          oninput="filtrarFinanceiro(this.value)">
+      </div>
+      <div id="fin-resumo" style="font-size:13px;color:var(--muted);text-align:center;padding:20px">
+        Carregando...
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de lançamentos -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Todos os Lançamentos</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="filtrarStatusFin('todos')">Todos</button>
+        <button class="btn btn-outline btn-sm" onclick="filtrarStatusFin('pendente')">Pendentes</button>
+        <button class="btn btn-outline btn-sm" onclick="filtrarStatusFin('atrasado')">Atrasados</button>
+        <button class="btn btn-outline btn-sm" onclick="filtrarStatusFin('pago')">Pagos</button>
+        <button class="btn btn-gold btn-sm" onclick="gerarRelatorioFinanceiro()">📊 Relatório PDF</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr><th>Cliente</th><th>Tipo</th><th>Processo</th><th>Valor</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr>
+        </thead>
+        <tbody id="fin-tbody">
+          <tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Nenhum lançamento. Adicione o primeiro!</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- DATAJUD CNJ -->
+<div id="page-datajud" class="page">
+  <div class="ph">
+    <div class="ph-eyebrow">Integração CNJ</div>
+    <h1>DataJud — Consulta de Processos</h1>
+    <p>Busca automática de movimentações no sistema do CNJ</p>
+  </div>
+
+  <div class="alert info" style="margin-bottom:16px">
+    <div class="alert-icon">ℹ</div>
+    <div>Digite o número CNJ para buscar automaticamente as movimentações no DataJud. Os dados são atualizados em tempo real diretamente do CNJ.</div>
+  </div>
+
+  <div class="card">
+    <div class="card-hdr"><div class="card-title">🔍 Consultar Processo no CNJ</div></div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+      <input id="dj-cnj" placeholder="Digite o nº CNJ: 0000000-00.0000.8.19.0000"
+        style="flex:1;min-width:280px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif"
+        onkeydown="if(event.key==='Enter') consultarDataJud()">
+      <button class="btn btn-primary" onclick="consultarDataJud()">🔍 Consultar CNJ</button>
+      <button class="btn btn-outline" onclick="atualizarTodosProcessos()">🔄 Atualizar Todos</button>
+    </div>
+    <div id="dj-resultado" style="min-height:100px">
+      <div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">
+        Digite um número CNJ acima e clique em Consultar
+      </div>
+    </div>
+  </div>
+
+  <!-- Processos com movimentações recentes -->
+  <div class="card">
+    <div class="card-hdr">
+      <div class="card-title">Últimas Movimentações</div>
+      <span style="font-size:11px;color:var(--muted)" id="dj-ultima-atualizacao">—</span>
+    </div>
+    <div id="dj-movimentacoes">
+      <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">
+        Clique em "Atualizar Todos" para buscar movimentações recentes
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="page-portal" class="page">
   <div class="ph">
     <div class="ph-eyebrow">Portal do Cliente</div>
@@ -519,6 +691,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
   </div>
 </div>
 
+<!-- MODAL DETALHE DO PROCESSO -->
+<div class="modal-over" id="modal-proc-detalhe" onclick="fecharModal(event)">
+  <div class="modal" style="width:600px">
+    <div class="modal-title">
+      <span>⚖️ Detalhe do Processo</span>
+      <button class="modal-close" onclick="closeModal('proc-detalhe')">✕</button>
+    </div>
+    <div id="modal-proc-detalhe-body"></div>
+  </div>
+</div>
+
 <script>
 // ── SUPABASE ──────────────────────────────────────────
 const SB_URL = 'https://gbyvuwwsvdgyuhpwszgl.supabase.co';
@@ -603,7 +786,8 @@ window.addEventListener('DOMContentLoaded', async () => {
   await Promise.all([
     carregarProcessos(),
     carregarClientes(),
-    carregarPrazos()
+    carregarPrazos(),
+    carregarFinanceiro()
   ]);
 });
 
@@ -634,6 +818,70 @@ async function testarDB() {
   }
 }
 
+// ── BUSCA / FILTRO ────────────────────────────────────
+let ALL_CLIENTES_DATA = [];
+let ALL_PROCESSOS_DATA = [];
+
+function filtrarClientes(termo) {
+  const t = termo.toLowerCase().trim();
+  const tbody = document.getElementById('cli-tbody');
+  const mapaId = {Trabalhista:'trab',Cível:'civ','Previdenciário':'prev','Família':'fam',Consumidor:'cons'};
+  const lista = t === '' ? ALL_CLIENTES_DATA : ALL_CLIENTES_DATA.filter(c =>
+    (c.nome||'').toLowerCase().includes(t) ||
+    (c.cpf_cnpj||'').toLowerCase().includes(t) ||
+    (c.whatsapp||'').toLowerCase().includes(t) ||
+    (c.email||'').toLowerCase().includes(t)
+  );
+  const el = document.getElementById('cli-count');
+  if(el) el.textContent = `${lista.length} cliente${lista.length!==1?'s':''}`;
+  if(lista.length===0){
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhum cliente encontrado para "${termo}"</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = lista.map(c=>`<tr>
+    <td style="font-size:13px;font-weight:500">${c.nome}</td>
+    <td style="font-size:12px">${c.telefone||c.whatsapp||'—'}</td>
+    <td style="font-size:12px">${c.whatsapp||'—'}</td>
+    <td><span class="tag tag-${mapaId[c.area]||'civ'}">${c.area||'—'}</span></td>
+    <td><span class="pill ${(c.status||'Ativo')==='Ativo'?'pill-ok':'pill-muted'}">${c.status||'Ativo'}</span></td>
+    <td><button class="btn btn-outline btn-sm">Portal</button></td>
+  </tr>`).join('');
+}
+
+function filtrarProcessos(termo) {
+  const t = termo.toLowerCase().trim();
+  const tbody = document.getElementById('proc-tbody');
+  const mapaId = {Trabalhista:'trab',Cível:'civ','Previdenciário':'prev','Família':'fam',Consumidor:'cons'};
+  const lista = t === '' ? ALL_PROCESSOS_DATA : ALL_PROCESSOS_DATA.filter(p =>
+    (p.numero_cnj||'').toLowerCase().includes(t) ||
+    (p.cliente||'').toLowerCase().includes(t) ||
+    (p.area||'').toLowerCase().includes(t) ||
+    (p.assunto||'').toLowerCase().includes(t) ||
+    (p.comarca||'').toLowerCase().includes(t)
+  );
+  document.getElementById('proc-count').textContent = `${lista.length} processo${lista.length!==1?'s':''}`;
+  if(lista.length===0){
+    tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">Nenhum processo encontrado para "${termo}"</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = lista.map(p => {
+    const aTag = mapaId[p.area]||'civ';
+    const nomeCliente = p.clientes?.nome || p.cliente || '';
+    const dias = p.proximo_prazo_data ? Math.round((new Date(p.proximo_prazo_data)-new Date())/(1000*86400)) : null;
+    const prazoHtml = dias !== null
+      ? `<span class="pill ${dias<0?'pill-danger':dias<=7?'pill-warn':'pill-ok'}">${dias<0?'Vencido':dias===0?'Hoje':dias+' dias'}</span>`
+      : '<span style="color:var(--muted);font-size:11px">—</span>';
+    return `<tr>
+      <td style="font-family:monospace;font-size:10px">${p.numero_cnj}</td>
+      <td style="font-size:12px">${nomeCliente||'<span style="color:var(--muted);font-size:11px">—</span>'}</td>
+      <td><span class="tag tag-${aTag}">${p.area||'Cível'}</span></td>
+      <td><span class="pill ${(p.status||'Ativo')==='Ativo'?'pill-ok':'pill-muted'}">${p.status||'Ativo'}</span></td>
+      <td>${prazoHtml}</td>
+      <td><button class="btn btn-outline btn-sm" onclick="verProcesso('${p.id||p.numero_cnj}')">Ver</button></td>
+    </tr>`;
+  }).join('');
+}
+
 // ── PROCESSOS ─────────────────────────────────────────
 async function carregarProcessos() {
   const tbody = document.getElementById('proc-tbody');
@@ -655,6 +903,7 @@ async function carregarProcessos() {
     data = LOCAL_PROCESSOS;
   }
 
+  ALL_PROCESSOS_DATA = data;
   document.getElementById('sb-nproc').textContent = data.length;
   document.getElementById('st-proc').textContent  = data.length;
   document.getElementById('d-proc').textContent   = data.length;
@@ -725,6 +974,7 @@ async function carregarClientes() {
     data = LOCAL_CLIENTES;
   }
 
+  ALL_CLIENTES_DATA = data;
   document.getElementById('sb-ncli').textContent = data.length;
   document.getElementById('st-cli').textContent  = data.length;
   document.getElementById('d-cli').textContent   = data.length;
@@ -963,7 +1213,386 @@ function nav(id, btn) {
   const si = document.querySelector(`.si[onclick*="${id}"]`);
   if(si) si.classList.add('on');
 }
-function verProcesso(id){}
+// ── VER PROCESSO (modal detalhe) ──────────────────────
+function verProcesso(id) {
+  const p = ALL_PROCESSOS_DATA.find(x => (x.id||x.numero_cnj) === id) || ALL_PROCESSOS_DATA.find(x => x.numero_cnj === id);
+  if(!p) return;
+  const mapaArea = {Trabalhista:'trab',Cível:'civ','Previdenciário':'prev','Família':'fam',Consumidor:'cons'};
+  document.getElementById('modal-proc-detalhe-body').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">
+      <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Nº CNJ</div>
+        <div style="font-family:monospace;font-size:13px">${p.numero_cnj}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Área</div>
+        <span class="tag tag-${mapaArea[p.area]||'civ'}">${p.area||'—'}</span></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Cliente</div>
+        <div style="font-size:13px">${p.cliente||p.clientes?.nome||'—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Status</div>
+        <span class="pill ${(p.status||'Ativo')==='Ativo'?'pill-ok':'pill-muted'}">${p.status||'Ativo'}</span></div>
+      <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Assunto</div>
+        <div style="font-size:13px">${p.assunto||'—'}</div></div>
+      <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Comarca / Vara</div>
+        <div style="font-size:13px">${p.comarca||'—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Última Movimentação</div>
+        <div style="font-size:13px">${p.ultima_mov||'—'}</div></div>
+      <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">Data</div>
+        <div style="font-size:13px">${p.ultima_data||'—'}</div></div>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Observações</div>
+      <textarea id="proc-obs-${p.numero_cnj}" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;min-height:80px;resize:vertical" placeholder="Registre andamentos, estratégias, observações...">${p.observacoes||''}</textarea>
+      <button class="btn btn-primary btn-sm" style="margin-top:8px" onclick="salvarObservacao('${p.numero_cnj}')">💾 Salvar observação</button>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-outline btn-sm" onclick="consultarDataJudDireto('${p.numero_cnj}')">🔍 Buscar no DataJud</button>
+      <button class="btn btn-outline btn-sm" onclick="nav('financeiro');closeModal('proc-detalhe')">💰 Ver financeiro</button>
+    </div>`;
+  openModal('proc-detalhe');
+}
+
+async function salvarObservacao(cnj) {
+  const obs = document.getElementById('proc-obs-'+cnj)?.value;
+  if(dbOnline) {
+    await db.from('processos').update({observacoes: obs}).eq('numero_cnj', cnj);
+  }
+  const p = ALL_PROCESSOS_DATA.find(x => x.numero_cnj === cnj);
+  if(p) p.observacoes = obs;
+  alert('Observação salva! ✅');
+}
+
+// ── FINANCEIRO ────────────────────────────────────────
+let ALL_FIN_DATA = [];
+
+async function carregarFinanceiro() {
+  const tbody = document.getElementById('fin-tbody');
+  const resumo = document.getElementById('fin-resumo');
+  let data = [];
+
+  // Preencher datalist de clientes
+  const dl = document.getElementById('fin-clientes-list');
+  if(dl) dl.innerHTML = ALL_CLIENTES_DATA.map(c=>`<option value="${c.nome}">`).join('') +
+    ALL_PROCESSOS_DATA.map(p=>p.cliente?`<option value="${p.cliente}">`:'' ).join('');
+
+  if(dbOnline) {
+    try {
+      const { data: d, error } = await db.from('financeiro').select('*').order('created_at',{ascending:false});
+      if(!error && d) data = d;
+    } catch(e){}
+  }
+  data = [...data, ...ALL_FIN_DATA.filter(f=>!data.find(d=>d.id===f.id))];
+  ALL_FIN_DATA = data;
+  renderFinanceiro(data);
+}
+
+function renderFinanceiro(data) {
+  const tbody = document.getElementById('fin-tbody');
+  const resumo = document.getElementById('fin-resumo');
+
+  // Stats
+  const receber = data.filter(f=>f.status==='pendente'||f.status==='atrasado').reduce((s,f)=>s+(parseFloat(f.valor)||0),0);
+  const hoje = new Date();
+  const recebidoMes = data.filter(f=>f.status==='pago'&&f.data_pagamento&&new Date(f.data_pagamento).getMonth()===hoje.getMonth()).reduce((s,f)=>s+(parseFloat(f.valor)||0),0);
+  const inadim = [...new Set(data.filter(f=>f.status==='atrasado').map(f=>f.cliente))].length;
+  const despesas = data.filter(f=>f.tipo==='despesa'||f.tipo==='reembolso').reduce((s,f)=>s+(parseFloat(f.valor)||0),0);
+
+  document.getElementById('fin-receber').textContent = 'R$ '+receber.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  document.getElementById('fin-recebido').textContent = 'R$ '+recebidoMes.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  document.getElementById('fin-inadim').textContent = inadim;
+  document.getElementById('fin-despesas').textContent = 'R$ '+despesas.toLocaleString('pt-BR',{minimumFractionDigits:2});
+  document.getElementById('fin-mes').textContent = hoje.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+
+  // Resumo por cliente
+  const porCliente = {};
+  data.forEach(f => {
+    if(!f.cliente) return;
+    if(!porCliente[f.cliente]) porCliente[f.cliente] = {pago:0,pendente:0,atrasado:0};
+    if(f.status==='pago') porCliente[f.cliente].pago += parseFloat(f.valor)||0;
+    else if(f.status==='atrasado') porCliente[f.cliente].atrasado += parseFloat(f.valor)||0;
+    else porCliente[f.cliente].pendente += parseFloat(f.valor)||0;
+  });
+  resumo.innerHTML = Object.keys(porCliente).length === 0
+    ? '<div style="text-align:center;padding:20px;color:var(--muted);font-size:13px">Nenhum lançamento ainda</div>'
+    : Object.entries(porCliente).map(([nome,v])=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:500">${nome}</div>
+        <div style="display:flex;gap:8px;font-size:11px">
+          ${v.pago?`<span class="pill pill-ok">Pago R$${v.pago.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`:''}
+          ${v.pendente?`<span class="pill pill-warn">Pend. R$${v.pendente.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`:''}
+          ${v.atrasado?`<span class="pill pill-danger">Atras. R$${v.atrasado.toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>`:''}
+        </div>
+      </div>`).join('');
+
+  if(data.length===0){
+    tbody.innerHTML=`<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--muted)">Nenhum lançamento. Adicione o primeiro!</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = data.map(f=>{
+    const statusCls = f.status==='pago'?'pill-ok':f.status==='atrasado'?'pill-danger':'pill-warn';
+    const tipoLabel = {honorario:'Honorário',parcela:'Parcela',exito:'Êxito',despesa:'Despesa',reembolso:'Reembolso'}[f.tipo]||f.tipo;
+    return `<tr>
+      <td style="font-size:12px;font-weight:500">${f.cliente||'—'}</td>
+      <td><span class="tag tag-civ">${tipoLabel}</span></td>
+      <td style="font-family:monospace;font-size:10px">${f.processo_cnj||'—'}</td>
+      <td style="font-size:13px;font-weight:600">R$ ${parseFloat(f.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+      <td style="font-size:12px">${f.vencimento?new Date(f.vencimento).toLocaleDateString('pt-BR'):'—'}</td>
+      <td><span class="pill ${statusCls}">${f.status}</span></td>
+      <td style="display:flex;gap:4px">
+        ${f.status!=='pago'?`<button class="btn btn-outline btn-sm" onclick="marcarPago('${f.id}')">✅ Pago</button>`:''}
+        <button class="btn btn-outline btn-sm" onclick="gerarRecibo(${JSON.stringify(f).replace(/"/g,'&quot;')})">🧾 Recibo</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrarFinanceiro(termo) {
+  const t = termo.toLowerCase();
+  renderFinanceiro(t ? ALL_FIN_DATA.filter(f=>(f.cliente||'').toLowerCase().includes(t)||(f.processo_cnj||'').toLowerCase().includes(t)) : ALL_FIN_DATA);
+}
+
+function filtrarStatusFin(status) {
+  renderFinanceiro(status==='todos' ? ALL_FIN_DATA : ALL_FIN_DATA.filter(f=>f.status===status));
+}
+
+async function salvarFinanceiro() {
+  const obj = {
+    tipo: document.getElementById('fin-tipo').value,
+    cliente: document.getElementById('fin-cliente').value.trim(),
+    processo_cnj: document.getElementById('fin-cnj').value.trim(),
+    valor: parseFloat(document.getElementById('fin-valor').value)||0,
+    vencimento: document.getElementById('fin-venc').value||null,
+    status: document.getElementById('fin-status').value,
+    data_pagamento: document.getElementById('fin-datapag').value||null,
+    observacoes: document.getElementById('fin-obs').value.trim()
+  };
+  if(!obj.cliente||!obj.valor){ document.getElementById('fin-msg').innerHTML='<span style="color:var(--danger)">Preencha cliente e valor.</span>'; return; }
+  document.getElementById('fin-msg').innerHTML='<span class="spinner"></span> Salvando...';
+
+  if(dbOnline) {
+    const { error } = await db.from('financeiro').insert([obj]);
+    if(!error) { ALL_FIN_DATA.unshift({...obj, id: Date.now().toString()}); }
+    else { ALL_FIN_DATA.unshift({...obj, id: 'local-'+Date.now()}); }
+  } else {
+    ALL_FIN_DATA.unshift({...obj, id: 'local-'+Date.now()});
+  }
+  document.getElementById('fin-msg').innerHTML='<span style="color:var(--ok)">✅ Lançamento salvo!</span>';
+  document.getElementById('fin-cliente').value='';
+  document.getElementById('fin-cnj').value='';
+  document.getElementById('fin-valor').value='';
+  document.getElementById('fin-obs').value='';
+  renderFinanceiro(ALL_FIN_DATA);
+}
+
+async function marcarPago(id) {
+  const hoje = new Date().toISOString().split('T')[0];
+  if(dbOnline) await db.from('financeiro').update({status:'pago',data_pagamento:hoje}).eq('id',id);
+  const f = ALL_FIN_DATA.find(x=>x.id===id);
+  if(f){ f.status='pago'; f.data_pagamento=hoje; }
+  renderFinanceiro(ALL_FIN_DATA);
+}
+
+function gerarRecibo(f) {
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const num = Math.floor(Math.random()*9000)+1000;
+  const tipoLabel = {honorario:'Honorários Advocatícios',parcela:'Parcela Mensal',exito:'Honorários de Êxito',despesa:'Despesa Processual',reembolso:'Reembolso de Custas'}[f.tipo]||f.tipo;
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>Recibo ${num}</title>
+  <style>body{font-family:serif;max-width:600px;margin:40px auto;padding:20px;color:#111}
+  h2{text-align:center;font-size:18px;text-transform:uppercase;margin-bottom:4px}
+  .sub{text-align:center;font-size:12px;color:#555;margin-bottom:24px}
+  .valor{font-size:32px;font-weight:bold;text-align:center;margin:16px 0;color:#0C1B33}
+  table{width:100%;border-collapse:collapse;margin-bottom:20px}
+  td{padding:8px 4px;border-bottom:1px solid #eee;font-size:13px}
+  td:first-child{font-weight:bold;width:35%;color:#555}
+  .rodape{margin-top:40px;text-align:center;font-size:12px;color:#777;border-top:1px solid #eee;padding-top:16px}
+  @media print{.nobtn{display:none}}</style></head><body>
+  <h2>Recibo de Pagamento</h2>
+  <div class="sub">Escritório Monsuetto Rodrigues · OAB/RJ 160959</div>
+  <div class="sub">Recibo nº ${num}</div>
+  <div class="valor">R$ ${parseFloat(f.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+  <table>
+    <tr><td>Recebido de</td><td>${f.cliente||'—'}</td></tr>
+    <tr><td>Referente a</td><td>${tipoLabel}</td></tr>
+    ${f.processo_cnj?`<tr><td>Processo</td><td>${f.processo_cnj}</td></tr>`:''}
+    <tr><td>Data</td><td>${hoje}</td></tr>
+    ${f.observacoes?`<tr><td>Observações</td><td>${f.observacoes}</td></tr>`:''}
+  </table>
+  <div class="rodape">
+    Monsuetto Rodrigues Silva de Oliveira · OAB/RJ 160959<br>
+    monsuettorodriguesadvogado@hotmail.com<br><br>
+    Rio de Janeiro, ${hoje}<br><br>
+    ________________________________<br>
+    Assinatura
+  </div>
+  <div class="nobtn" style="text-align:center;margin-top:20px">
+    <button onclick="window.print()" style="padding:10px 24px;background:#0C1B33;color:#C4962A;border:none;border-radius:8px;cursor:pointer;font-size:14px">🖨️ Imprimir / Salvar PDF</button>
+  </div>
+  </body></html>`;
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+function gerarRelatorioFinanceiro() {
+  const hoje = new Date().toLocaleDateString('pt-BR',{day:'2-digit',month:'long',year:'numeric'});
+  const receber = ALL_FIN_DATA.filter(f=>f.status==='pendente'||f.status==='atrasado').reduce((s,f)=>s+(parseFloat(f.valor)||0),0);
+  const recebido = ALL_FIN_DATA.filter(f=>f.status==='pago').reduce((s,f)=>s+(parseFloat(f.valor)||0),0);
+  const rows = ALL_FIN_DATA.map(f=>`<tr>
+    <td>${f.cliente||'—'}</td>
+    <td>${{honorario:'Honorário',parcela:'Parcela',exito:'Êxito',despesa:'Despesa',reembolso:'Reembolso'}[f.tipo]||f.tipo}</td>
+    <td>${f.processo_cnj||'—'}</td>
+    <td>R$ ${parseFloat(f.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</td>
+    <td>${f.vencimento?new Date(f.vencimento).toLocaleDateString('pt-BR'):'—'}</td>
+    <td>${f.status}</td>
+  </tr>`).join('');
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatório Financeiro</title>
+  <style>body{font-family:sans-serif;padding:32px;color:#111}h1{color:#0C1B33;margin-bottom:4px}
+  .sub{color:#777;font-size:13px;margin-bottom:24px}.stats{display:flex;gap:20px;margin-bottom:24px}
+  .stat{background:#f5f3ee;padding:16px;border-radius:8px;flex:1;text-align:center}
+  .stat-val{font-size:24px;font-weight:bold;color:#0C1B33}.stat-lbl{font-size:11px;color:#777;text-transform:uppercase}
+  table{width:100%;border-collapse:collapse}th{background:#0C1B33;color:#C4962A;padding:10px;font-size:12px;text-align:left}
+  td{padding:9px 10px;border-bottom:1px solid #eee;font-size:12px}
+  @media print{.nobtn{display:none}}</style></head><body>
+  <h1>Relatório Financeiro</h1>
+  <div class="sub">Escritório Monsuetto Rodrigues · OAB/RJ 160959 · ${hoje}</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">R$ ${recebido.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stat-lbl">Total Recebido</div></div>
+    <div class="stat"><div class="stat-val">R$ ${receber.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div><div class="stat-lbl">A Receber</div></div>
+    <div class="stat"><div class="stat-val">${ALL_FIN_DATA.length}</div><div class="stat-lbl">Lançamentos</div></div>
+  </div>
+  <table><thead><tr><th>Cliente</th><th>Tipo</th><th>Processo</th><th>Valor</th><th>Vencimento</th><th>Status</th></tr></thead>
+  <tbody>${rows}</tbody></table>
+  <div class="nobtn" style="text-align:center;margin-top:24px">
+    <button onclick="window.print()" style="padding:10px 24px;background:#0C1B33;color:#C4962A;border:none;border-radius:8px;cursor:pointer;font-size:14px">🖨️ Imprimir / Salvar PDF</button>
+  </div></body></html>`;
+  const w = window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
+}
+
+// ── DATAJUD CNJ ───────────────────────────────────────
+const DJ_KEY = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
+const DJ_URL = 'https://api-publica.datajud.cnj.jus.br';
+
+const DJ_TRIBUNAIS = {
+  '8.19': 'tjrj', '8.26': 'tjsp', '8.13': 'tjmg', '8.21': 'tjrs',
+  '8.07': 'tjdf', '8.08': 'tjgo', '8.09': 'tjma', '8.11': 'tjmt',
+  '8.12': 'tjms', '8.14': 'tjpa', '8.15': 'tjpb', '8.16': 'tjpr',
+  '8.17': 'tjpe', '8.18': 'tjpi', '8.20': 'tjrn', '8.22': 'tjsc',
+  '8.23': 'tjse', '8.24': 'tjto', '8.25': 'tjal', '8.06': 'tjes',
+  '8.03': 'tjam', '8.04': 'tjba', '8.05': 'tjce', '8.01': 'tjac',
+  '8.02': 'tjap', '8.10': 'tjro', '8.27': 'tjrr',
+};
+
+function getTribunal(cnj) {
+  const m = cnj.match(/\d+\.\d+\.(\d+\.\d+)\.\d+/);
+  if(!m) return 'tjrj';
+  return DJ_TRIBUNAIS[m[1]] || 'tjrj';
+}
+
+async function consultarDataJud() {
+  const cnj = document.getElementById('dj-cnj').value.trim();
+  if(!cnj){ alert('Digite o número CNJ!'); return; }
+  await consultarDataJudDireto(cnj);
+}
+
+async function consultarDataJudDireto(cnj) {
+  const res = document.getElementById('dj-resultado');
+  if(res) res.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div> Consultando CNJ...</div>';
+  const tribunal = getTribunal(cnj);
+  try {
+    const resp = await fetch(`${DJ_URL}/api_publica_${tribunal}/_search`, {
+      method: 'POST',
+      headers: { 'Authorization': `APIKey ${DJ_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: { match: { 'numeroProcesso': cnj } } })
+    });
+    const data = await resp.json();
+    const hits = data?.hits?.hits || [];
+    if(hits.length === 0) {
+      if(res) res.innerHTML = `<div class="alert warn"><div class="alert-icon">⚠</div><div>Processo não encontrado no DataJud para o tribunal <strong>${tribunal.toUpperCase()}</strong>. Verifique o número CNJ.</div></div>`;
+      return;
+    }
+    const proc = hits[0]._source;
+    const movs = (proc.movimentos||[]).slice(0,10);
+    const html = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;padding:16px;background:var(--cream);border-radius:10px">
+        <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Processo</div><div style="font-family:monospace;font-size:12px">${proc.numeroProcesso||cnj}</div></div>
+        <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Tribunal</div><div style="font-size:13px">${tribunal.toUpperCase()}</div></div>
+        <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Classe</div><div style="font-size:13px">${proc.classe?.nome||'—'}</div></div>
+        <div><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Assunto</div><div style="font-size:13px">${proc.assuntos?.[0]?.nome||'—'}</div></div>
+        <div style="grid-column:1/-1"><div style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Órgão Julgador</div><div style="font-size:13px">${proc.orgaoJulgador?.nome||'—'}</div></div>
+      </div>
+      <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Últimas Movimentações</div>
+      ${movs.length===0?'<div style="color:var(--muted);font-size:13px">Nenhuma movimentação encontrada</div>':
+        movs.map(m=>`<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+          <div style="font-size:11px;color:var(--muted);white-space:nowrap;min-width:80px">${m.dataHora?new Date(m.dataHora).toLocaleDateString('pt-BR'):'—'}</div>
+          <div style="font-size:13px">${m.nome||m.descricao||'—'}</div>
+        </div>`).join('')}
+      <div style="margin-top:12px">
+        <button class="btn btn-primary btn-sm" onclick="importarDataJud(${JSON.stringify(proc).replace(/"/g,'&quot;')})">💾 Importar para o sistema</button>
+      </div>`;
+    if(res) res.innerHTML = html;
+
+    // Atualizar no modal se aberto
+    const modalBody = document.getElementById('modal-proc-detalhe-body');
+    if(modalBody && modalBody.innerHTML.includes(cnj)) {
+      // refresh movimentações no modal
+    }
+  } catch(e) {
+    if(res) res.innerHTML = `<div class="alert danger"><div class="alert-icon">❌</div><div>Erro ao consultar DataJud: ${e.message}. Verifique sua conexão.</div></div>`;
+  }
+}
+
+async function importarDataJud(proc) {
+  const cnj = proc.numeroProcesso;
+  const update = {
+    assunto: proc.assuntos?.[0]?.nome || '',
+    comarca: proc.orgaoJulgador?.nome || '',
+    ultima_mov: proc.movimentos?.[0]?.nome || '',
+    ultima_data: proc.movimentos?.[0]?.dataHora ? proc.movimentos[0].dataHora.split('T')[0] : null
+  };
+  if(dbOnline) {
+    await db.from('processos').update(update).eq('numero_cnj', cnj);
+  }
+  const p = ALL_PROCESSOS_DATA.find(x=>x.numero_cnj===cnj);
+  if(p) Object.assign(p, update);
+  alert(`✅ Processo ${cnj} atualizado com dados do DataJud!`);
+}
+
+async function atualizarTodosProcessos() {
+  const ativos = ALL_PROCESSOS_DATA.filter(p=>p.status==='Ativo').slice(0,10);
+  const div = document.getElementById('dj-movimentacoes');
+  if(div) div.innerHTML = '<div style="text-align:center;padding:20px"><div class="spinner"></div> Consultando '+ativos.length+' processos...</div>';
+  const resultados = [];
+  for(const p of ativos) {
+    try {
+      const tribunal = getTribunal(p.numero_cnj);
+      const resp = await fetch(`${DJ_URL}/api_publica_${tribunal}/_search`, {
+        method:'POST',
+        headers:{'Authorization':`APIKey ${DJ_KEY}`,'Content-Type':'application/json'},
+        body: JSON.stringify({query:{match:{'numeroProcesso':p.numero_cnj}}})
+      });
+      const data = await resp.json();
+      const hit = data?.hits?.hits?.[0]?._source;
+      if(hit) {
+        const ultima = hit.movimentos?.[0];
+        resultados.push({cnj:p.numero_cnj, cliente:p.cliente||'—', mov:ultima?.nome||'—', data:ultima?.dataHora?new Date(ultima.dataHora).toLocaleDateString('pt-BR'):'—'});
+      }
+    } catch(e) {}
+    await new Promise(r=>setTimeout(r,300));
+  }
+  document.getElementById('dj-ultima-atualizacao').textContent = 'Atualizado: '+new Date().toLocaleTimeString('pt-BR');
+  if(div) div.innerHTML = resultados.length===0
+    ? '<div style="text-align:center;padding:20px;color:var(--muted)">Nenhum resultado encontrado</div>'
+    : resultados.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:12px;font-family:monospace">${r.cnj}</div>
+          <div style="font-size:11px;color:var(--muted)">${r.cliente}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px">${r.mov}</div>
+          <div style="font-size:11px;color:var(--muted)">${r.data}</div>
+        </div>
+      </div>`).join('');
+}
 
 // ── MODALS ────────────────────────────────────────────
 function openModal(id){ document.getElementById('modal-'+id)?.classList.add('open'); }
