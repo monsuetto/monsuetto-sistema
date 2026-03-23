@@ -336,7 +336,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
     <div style="overflow-x:auto">
       <table class="tbl">
         <thead>
-          <tr><th>Nome</th><th>Telefone</th><th>WhatsApp</th><th>Área</th><th>Status</th><th>Portal</th></tr>
+          <tr><th>Nome</th><th>WhatsApp</th><th>Área</th><th>Honorário</th><th>Status</th><th>Ações</th></tr>
         </thead>
         <tbody id="cli-tbody">
           <tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">
@@ -549,32 +549,98 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 <div id="page-datajud" class="page">
   <div class="ph">
     <div class="ph-eyebrow">Integração CNJ</div>
-    <h1>DataJud — Consulta de Processos</h1>
-    <p>Busca automática de movimentações no sistema do CNJ</p>
+    <h1>CNJ — Consulta & Importação</h1>
+    <p>Busca por OAB, importação em lote e consulta individual de processos</p>
   </div>
 
-  <div class="alert info" style="margin-bottom:16px">
-    <div class="alert-icon">ℹ</div>
-    <div>Digite o número CNJ para buscar automaticamente as movimentações no DataJud. Os dados são atualizados em tempo real diretamente do CNJ.</div>
+  <!-- IMPORTAR PELO OAB -->
+  <div class="card" style="border-top:3px solid var(--gold);margin-bottom:14px">
+    <div class="card-hdr">
+      <div class="card-title">⭐ Importar todos os processos pelo OAB</div>
+    </div>
+    <div class="alert info" style="margin-bottom:14px">
+      <div class="alert-icon">ℹ</div>
+      <div>Busca <strong>todos os processos</strong> vinculados ao OAB/RJ 160959 no CNJ — incluindo os que têm segredo de justiça. Clique em "Buscar pelo OAB" para importar automaticamente.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Número OAB</label>
+        <input id="oab-numero" value="160959" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif">
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Estado OAB</label>
+        <select id="oab-estado" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif">
+          <option value="RJ" selected>RJ — Rio de Janeiro</option>
+          <option value="SP">SP — São Paulo</option>
+          <option value="MG">MG — Minas Gerais</option>
+          <option value="RS">RS — Rio Grande do Sul</option>
+          <option value="BA">BA — Bahia</option>
+        </select>
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Data inicial</label>
+        <input id="oab-data-ini" type="date" value="2016-01-01" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif">
+      </div>
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:5px">Data final</label>
+        <input id="oab-data-fim" type="date" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif">
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn btn-gold" onclick="buscarPorOAB()">⚖️ Buscar pelo OAB no CNJ</button>
+      <button class="btn btn-primary" onclick="importarTodosOAB()">💾 Importar todos para o sistema</button>
+      <button class="btn btn-outline" onclick="abrirCNJComunica()">🔗 Abrir CNJ Comunicações</button>
+    </div>
+    <div id="oab-status" style="margin-top:12px;font-size:13px"></div>
   </div>
 
-  <div class="card">
-    <div class="card-hdr"><div class="card-title">🔍 Consultar Processo no CNJ</div></div>
+  <!-- RESULTADOS OAB -->
+  <div class="card" id="oab-resultados-card" style="display:none;margin-bottom:14px">
+    <div class="card-hdr">
+      <div class="card-title" id="oab-resultados-titulo">Processos encontrados</div>
+      <div style="display:flex;gap:8px">
+        <input type="text" placeholder="🔍 Filtrar..." id="oab-filtro"
+          style="padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;width:180px"
+          oninput="filtrarResultadosOAB(this.value)">
+        <button class="btn btn-primary btn-sm" onclick="importarSelecionados()">💾 Importar selecionados</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto">
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="oab-check-all" onchange="toggleTodos(this.checked)"></th>
+            <th>Nº CNJ</th>
+            <th>Órgão / Vara</th>
+            <th>Tipo</th>
+            <th>Partes</th>
+            <th>Data</th>
+            <th>Segredo</th>
+          </tr>
+        </thead>
+        <tbody id="oab-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONSULTA INDIVIDUAL -->
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-hdr"><div class="card-title">🔍 Consultar processo individual</div></div>
     <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <input id="dj-cnj" placeholder="Digite o nº CNJ: 0000000-00.0000.8.19.0000"
         style="flex:1;min-width:280px;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif"
         onkeydown="if(event.key==='Enter') consultarDataJud()">
       <button class="btn btn-primary" onclick="consultarDataJud()">🔍 Consultar CNJ</button>
-      <button class="btn btn-outline" onclick="atualizarTodosProcessos()">🔄 Atualizar Todos</button>
+      <button class="btn btn-outline" onclick="atualizarTodosProcessos()">🔄 Atualizar ativos</button>
     </div>
-    <div id="dj-resultado" style="min-height:100px">
-      <div style="text-align:center;padding:40px;color:var(--muted);font-size:13px">
+    <div id="dj-resultado" style="min-height:60px">
+      <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">
         Digite um número CNJ acima e clique em Consultar
       </div>
     </div>
   </div>
 
-  <!-- Processos com movimentações recentes -->
+  <!-- Últimas Movimentações -->
   <div class="card">
     <div class="card-hdr">
       <div class="card-title">Últimas Movimentações</div>
@@ -582,7 +648,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
     </div>
     <div id="dj-movimentacoes">
       <div style="text-align:center;padding:24px;color:var(--muted);font-size:13px">
-        Clique em "Atualizar Todos" para buscar movimentações recentes
+        Clique em "Atualizar ativos" para buscar movimentações recentes
       </div>
     </div>
   </div>
@@ -650,10 +716,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
 
 <!-- MODAL: Novo Cliente -->
 <div class="modal-over" id="modal-addCliente" onclick="fecharModal(event)">
-  <div class="modal">
-    <div class="modal-title">Novo cliente <button class="modal-close" onclick="closeModal('addCliente')">✕</button></div>
+  <div class="modal" style="width:600px;max-width:95vw">
+    <div class="modal-title" id="modal-cli-titulo">Novo cliente <button class="modal-close" onclick="closeModal('addCliente')">✕</button></div>
+    <input type="hidden" id="nc-id">
+
+    <div style="font-size:10px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">📋 Dados Pessoais</div>
     <div class="form-row" style="margin-bottom:12px">
-      <div class="fg"><label>Nome completo</label><input id="nc-nome" placeholder="Nome do cliente"></div>
+      <div class="fg"><label>Nome completo *</label><input id="nc-nome" placeholder="Nome completo do cliente"></div>
       <div class="fg"><label>CPF / CNPJ</label><input id="nc-cpf" placeholder="000.000.000-00"></div>
     </div>
     <div class="form-row" style="margin-bottom:12px">
@@ -661,16 +730,82 @@ body{font-family:'DM Sans',sans-serif;background:var(--cream);color:var(--text);
       <div class="fg"><label>E-mail</label><input id="nc-email" placeholder="email@exemplo.com"></div>
     </div>
     <div class="form-row" style="margin-bottom:12px">
-      <div class="fg"><label>Status</label>
-        <select id="nc-status"><option>Ativo</option><option>Inativo</option></select>
+      <div class="fg"><label>Telefone fixo</label><input id="nc-tel" placeholder="(21) 2222-2222"></div>
+      <div class="fg"><label>Data de nascimento</label><input id="nc-nasc" type="date"></div>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label>Endereço</label><input id="nc-end" placeholder="Rua, nº, bairro, cidade"></div>
+
+    <div style="font-size:10px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px">⚖️ Dados do Caso</div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Área jurídica *</label>
+        <select id="nc-area">
+          <option>Cível</option><option>Família</option><option>Trabalhista</option>
+          <option>Previdenciário</option><option>Consumidor</option><option>Criminal</option><option>Empresarial</option>
+        </select>
       </div>
-      <div class="fg"><label>Origem</label>
-        <select id="nc-origem"><option>Indicação</option><option>Google</option><option>Instagram</option><option>WhatsApp</option><option>Outro</option></select>
+      <div class="fg"><label>Tipo de serviço</label>
+        <select id="nc-tipo-servico">
+          <option>Processo judicial</option><option>Consultoria</option><option>Acordo extrajudicial</option>
+          <option>Elaboração de contrato</option><option>Inventário/Sucessão</option><option>Divórcio</option><option>Outro</option>
+        </select>
       </div>
     </div>
-    <div class="fg"><label>Observações</label><textarea id="nc-obs" placeholder="Notas sobre o cliente..."></textarea></div>
-    <button class="btn btn-primary" style="width:100%;margin-top:6px" onclick="salvarCliente()">Salvar cliente</button>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Status *</label>
+        <select id="nc-status"><option>Ativo</option><option>Prospecto</option><option>Inativo</option><option>Encerrado</option></select>
+      </div>
+      <div class="fg"><label>Origem</label>
+        <select id="nc-origem"><option>Indicação</option><option>Google</option><option>Instagram</option><option>WhatsApp</option><option>OAB</option><option>Retorno</option><option>Outro</option></select>
+      </div>
+    </div>
+    <div class="fg" style="margin-bottom:12px"><label>Processo CNJ (se já distribuído)</label>
+      <input id="nc-cnj" placeholder="0000000-00.0000.8.19.0000 (opcional)"></div>
+
+    <div style="font-size:10px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px">💰 Honorários</div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Tipo de cobrança</label>
+        <select id="nc-tipo-cobranca">
+          <option value="fixo">Valor fixo</option><option value="mensal">Mensalidade</option>
+          <option value="exito">Êxito (%)</option><option value="fixo_exito">Fixo + Êxito</option><option value="gratuito">Gratuidade</option>
+        </select>
+      </div>
+      <div class="fg"><label>Valor honorário (R$)</label>
+        <input id="nc-honorario" type="number" placeholder="0,00" step="0.01">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>Nº de parcelas</label>
+        <input id="nc-parcelas" type="number" placeholder="1" min="1" max="120">
+      </div>
+      <div class="fg"><label>Vencimento 1ª parcela</label>
+        <input id="nc-vencimento" type="date">
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:12px">
+      <div class="fg"><label>% de êxito (se aplicável)</label>
+        <input id="nc-pct-exito" type="number" placeholder="30" min="0" max="100">
+      </div>
+      <div class="fg"><label>Valor da causa (R$)</label>
+        <input id="nc-valor-causa" type="number" placeholder="0,00" step="0.01">
+      </div>
+    </div>
+
+    <div style="font-size:10px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin:16px 0 10px">📝 Observações</div>
+    <div class="fg"><textarea id="nc-obs" placeholder="Resumo do caso, estratégia, observações importantes..." style="min-height:80px"></textarea></div>
+
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-primary" style="flex:1" onclick="salvarCliente()">✅ Salvar cliente</button>
+      <button class="btn btn-outline" onclick="closeModal('addCliente')">Cancelar</button>
+    </div>
     <div id="cli-msg" style="margin-top:10px;font-size:12px"></div>
+  </div>
+</div>
+
+<!-- MODAL: Ficha do Cliente 360° -->
+<div class="modal-over" id="modal-ficha-cliente" onclick="fecharModal(event)">
+  <div class="modal" style="width:680px;max-width:95vw">
+    <div class="modal-title">Ficha do Cliente <button class="modal-close" onclick="closeModal('ficha-cliente')">✕</button></div>
+    <div id="ficha-cliente-body"></div>
   </div>
 </div>
 
@@ -774,6 +909,11 @@ let dbOnline = false;
 
 // ── INIT ──────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async () => {
+  // Data hoje para campos de data
+  const hoje = new Date().toISOString().split('T')[0];
+  const fimEl = document.getElementById('oab-data-fim');
+  if(fimEl) fimEl.value = hoje;
+
   // Data
   const d = new Date();
   document.getElementById('hoje-txt').textContent =
@@ -978,20 +1118,36 @@ async function carregarClientes() {
   document.getElementById('sb-ncli').textContent = data.length;
   document.getElementById('st-cli').textContent  = data.length;
   document.getElementById('d-cli').textContent   = data.length;
+  const elc = document.getElementById('cli-count');
+  if(elc) elc.textContent = `${data.length} cliente${data.length!==1?'s':''}`;
 
   if(data.length===0){
     tbody.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--muted)">
       Nenhum cliente cadastrado. Clique em "+ Novo cliente".</td></tr>`;
     return;
   }
-  tbody.innerHTML = data.map(c=>`<tr>
-    <td style="font-size:13px;font-weight:500">${c.nome}</td>
-    <td style="font-size:12px">${c.telefone||c.whatsapp||'—'}</td>
-    <td style="font-size:12px">${c.whatsapp||'—'}</td>
-    <td><span class="tag tag-civ">${c.status||'Ativo'}</span></td>
-    <td><span class="pill ${(c.status||'Ativo')==='Ativo'?'pill-ok':'pill-muted'}">${c.status||'Ativo'}</span></td>
-    <td><button class="btn btn-outline btn-sm">Portal</button></td>
-  </tr>`).join('');
+  const mapaId = {Trabalhista:'trab',Cível:'civ','Previdenciário':'prev','Família:'fam',Consumidor:'cons'};
+  tbody.innerHTML = data.map(c=>{
+    const cid = (c.id||c.nome||'').replace(/'/g,"\\'");
+    const area = c.area||'Cível';
+    const aTag = {Trabalhista:'trab',Cível:'civ','Previdenciário':'prev','Família':'fam',Consumidor:'cons'}[area]||'civ';
+    const hon = c.honorario ? 'R$ '+parseFloat(c.honorario).toLocaleString('pt-BR',{minimumFractionDigits:2}) : '—';
+    const stClass = (c.status||'Ativo')==='Ativo'?'pill-ok':c.status==='Prospecto'?'pill-warn':'pill-muted';
+    return `<tr>
+      <td>
+        <div style="font-size:13px;font-weight:500">${c.nome}</div>
+        <div style="font-size:11px;color:var(--muted)">${c.cpf_cnpj||''}</div>
+      </td>
+      <td style="font-size:12px">${c.whatsapp||c.telefone||'—'}</td>
+      <td><span class="tag tag-${aTag}">${area}</span></td>
+      <td style="font-size:12px">${hon}</td>
+      <td><span class="pill ${stClass}">${c.status||'Ativo'}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="verFichaCliente('${cid}')">👁 Ver</button>
+        <button class="btn btn-outline btn-sm" onclick="editarCliente('${cid}')">✏️ Editar</button>
+      </td>
+    </tr>`;
+  }).join('');
 }
 
 // ── PRAZOS ────────────────────────────────────────────
@@ -1079,14 +1235,26 @@ async function salvarProcesso() {
 }
 
 async function salvarCliente() {
+  const id = document.getElementById('nc-id')?.value;
   const obj = {
-    id: 'local-cli-'+Date.now(),
     nome: document.getElementById('nc-nome').value.trim(),
     cpf_cnpj: document.getElementById('nc-cpf').value.trim(),
     whatsapp: document.getElementById('nc-wpp').value.trim(),
+    telefone: document.getElementById('nc-tel')?.value.trim()||'',
     email: document.getElementById('nc-email').value.trim(),
+    nascimento: document.getElementById('nc-nasc')?.value||null,
+    endereco: document.getElementById('nc-end')?.value.trim()||'',
+    area: document.getElementById('nc-area')?.value||'Cível',
+    tipo_servico: document.getElementById('nc-tipo-servico')?.value||'',
     status: document.getElementById('nc-status').value,
     origem: document.getElementById('nc-origem').value,
+    processo_cnj: document.getElementById('nc-cnj')?.value.trim()||'',
+    tipo_cobranca: document.getElementById('nc-tipo-cobranca')?.value||'fixo',
+    honorario: parseFloat(document.getElementById('nc-honorario')?.value)||null,
+    parcelas: parseInt(document.getElementById('nc-parcelas')?.value)||1,
+    vencimento: document.getElementById('nc-vencimento')?.value||null,
+    pct_exito: parseFloat(document.getElementById('nc-pct-exito')?.value)||null,
+    valor_causa: parseFloat(document.getElementById('nc-valor-causa')?.value)||null,
     observacoes: document.getElementById('nc-obs').value.trim()
   };
   if(!obj.nome){ document.getElementById('cli-msg').innerHTML='<span style="color:var(--danger)">Preencha o nome.</span>'; return; }
@@ -1095,16 +1263,179 @@ async function salvarCliente() {
 
   let saved = false;
   if (dbOnline) {
-    const { error } = await db.from('clientes').insert([obj]);
-    if (!error) saved = true;
+    if (id && !id.startsWith('local-')) {
+      const { error } = await db.from('clientes').update(obj).eq('id', id);
+      if (!error) saved = true;
+    } else {
+      const { error } = await db.from('clientes').insert([obj]);
+      if (!error) saved = true;
+    }
   }
   if (!saved) {
-    LOCAL_CLIENTES.unshift(obj);
+    const local = LOCAL_CLIENTES.find(x => x.id === id);
+    if (local) Object.assign(local, obj);
+    else { obj.id = 'local-cli-'+Date.now(); LOCAL_CLIENTES.unshift(obj); }
     saved = true;
   }
+
+  // Se tem honorário, cria lançamento financeiro automaticamente
+  if (obj.honorario && obj.honorario > 0 && obj.tipo_cobranca !== 'gratuito') {
+    const parcelas = obj.parcelas || 1;
+    const venc = obj.vencimento ? new Date(obj.vencimento) : new Date();
+    for (let i = 0; i < Math.min(parcelas, 12); i++) {
+      const dataVenc = new Date(venc);
+      dataVenc.setMonth(dataVenc.getMonth() + i);
+      const fin = {
+        cliente: obj.nome,
+        tipo: parcelas > 1 ? 'parcela' : 'honorario',
+        processo_cnj: obj.processo_cnj || null,
+        valor: obj.tipo_cobranca === 'mensal' ? obj.honorario : (obj.honorario / parcelas),
+        vencimento: dataVenc.toISOString().split('T')[0],
+        status: 'pendente',
+        observacoes: `${obj.tipo_cobranca} - Parcela ${i+1}/${parcelas}`
+      };
+      if (dbOnline) await db.from('financeiro').insert([fin]);
+      else LOCAL_FIN_DATA.push(fin);
+    }
+  }
+
   msg.innerHTML = '<span style="color:var(--ok)">✅ Cliente salvo!</span>';
   setTimeout(()=>{ closeModal('addCliente'); carregarClientes(); }, 1200);
 }
+
+function editarCliente(idOuNome) {
+  const c = ALL_CLIENTES_DATA.find(x => (x.id||x.nome) === idOuNome) || ALL_CLIENTES_DATA.find(x => x.nome === idOuNome);
+  if (!c) return;
+  document.getElementById('modal-cli-titulo').innerHTML = `Editar cliente — ${c.nome} <button class="modal-close" onclick="closeModal('addCliente')">✕</button>`;
+  document.getElementById('nc-id').value = c.id||'';
+  document.getElementById('nc-nome').value = c.nome||'';
+  document.getElementById('nc-cpf').value = c.cpf_cnpj||'';
+  document.getElementById('nc-wpp').value = c.whatsapp||'';
+  document.getElementById('nc-tel').value = c.telefone||'';
+  document.getElementById('nc-email').value = c.email||'';
+  document.getElementById('nc-nasc').value = c.nascimento||'';
+  document.getElementById('nc-end').value = c.endereco||'';
+  document.getElementById('nc-area').value = c.area||'Cível';
+  document.getElementById('nc-tipo-servico').value = c.tipo_servico||'Processo judicial';
+  document.getElementById('nc-status').value = c.status||'Ativo';
+  document.getElementById('nc-origem').value = c.origem||'Indicação';
+  document.getElementById('nc-cnj').value = c.processo_cnj||'';
+  document.getElementById('nc-tipo-cobranca').value = c.tipo_cobranca||'fixo';
+  document.getElementById('nc-honorario').value = c.honorario||'';
+  document.getElementById('nc-parcelas').value = c.parcelas||1;
+  document.getElementById('nc-vencimento').value = c.vencimento||'';
+  document.getElementById('nc-pct-exito').value = c.pct_exito||'';
+  document.getElementById('nc-valor-causa').value = c.valor_causa||'';
+  document.getElementById('nc-obs').value = c.observacoes||'';
+  openModal('addCliente');
+}
+
+function verFichaCliente(idOuNome) {
+  const c = ALL_CLIENTES_DATA.find(x => (x.id||x.nome) === idOuNome) || ALL_CLIENTES_DATA.find(x => x.nome === idOuNome);
+  if (!c) return;
+  const processos = ALL_PROCESSOS_DATA.filter(p =>
+    (p.cliente||'').toLowerCase().includes((c.nome||'').toLowerCase().split(' ')[0]) ||
+    (p.numero_cnj === c.processo_cnj)
+  );
+  const financeiros = ALL_FIN_DATA.filter(f => (f.cliente||'').toLowerCase().includes((c.nome||'').toLowerCase().split(' ')[0]));
+  const totalPago = financeiros.filter(f=>f.status==='pago').reduce((s,f)=>s+(parseFloat(f.valor)||0),0);
+  const totalPendente = financeiros.filter(f=>f.status==='pendente'||f.status==='atrasado').reduce((s,f)=>s+(parseFloat(f.valor)||0),0);
+
+  document.getElementById('ficha-cliente-body').innerHTML = `
+    <!-- Cabeçalho -->
+    <div style="display:flex;align-items:center;gap:16px;padding:16px;background:var(--navy);border-radius:10px;margin-bottom:16px">
+      <div style="width:52px;height:52px;border-radius:50%;background:var(--gold-bg);border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--gold);font-weight:700;flex-shrink:0">
+        ${(c.nome||'?')[0].toUpperCase()}
+      </div>
+      <div style="flex:1">
+        <div style="font-size:18px;font-weight:700;color:#fff">${c.nome}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.5)">${c.area||'—'} · ${c.status||'Ativo'} · ${c.cpf_cnpj||'CPF não informado'}</div>
+      </div>
+      <button class="btn btn-outline btn-sm" onclick="editarCliente('${(c.id||c.nome).replace(/'/g,"\\'")}');closeModal('ficha-cliente')" style="color:#fff;border-color:rgba(255,255,255,0.3)">✏️ Editar</button>
+    </div>
+
+    <!-- Stats financeiro -->
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">
+      <div style="background:rgba(26,92,50,0.1);border:1px solid rgba(26,92,50,0.2);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--ok)">R$ ${totalPago.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Total pago</div>
+      </div>
+      <div style="background:rgba(139,72,0,0.1);border:1px solid rgba(139,72,0,0.2);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--warn)">R$ ${totalPendente.toLocaleString('pt-BR',{minimumFractionDigits:2})}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">A receber</div>
+      </div>
+      <div style="background:rgba(12,27,51,0.06);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center">
+        <div style="font-size:18px;font-weight:700;color:var(--navy)">${processos.length}</div>
+        <div style="font-size:10px;color:var(--muted);text-transform:uppercase">Processos</div>
+      </div>
+    </div>
+
+    <!-- Dados pessoais -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      ${c.whatsapp?`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">WhatsApp</div><div style="font-size:13px">${c.whatsapp}</div></div>`:''}
+      ${c.email?`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">E-mail</div><div style="font-size:13px">${c.email}</div></div>`:''}
+      ${c.telefone?`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Telefone</div><div style="font-size:13px">${c.telefone}</div></div>`:''}
+      ${c.tipo_cobranca?`<div><div style="font-size:10px;color:var(--muted);text-transform:uppercase;margin-bottom:3px">Cobrança</div><div style="font-size:13px">${c.tipo_cobranca}${c.honorario?' — R$ '+parseFloat(c.honorario).toLocaleString('pt-BR',{minimumFractionDigits:2}):''}</div></div>`:''}
+    </div>
+
+    <!-- Processos vinculados -->
+    ${processos.length>0?`
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Processos vinculados</div>
+    ${processos.map(p=>`
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--cream);border-radius:8px;margin-bottom:6px">
+        <div>
+          <div style="font-family:monospace;font-size:11px">${p.numero_cnj}</div>
+          <div style="font-size:12px;color:var(--muted)">${p.assunto||p.comarca||'—'}</div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="pill ${p.status==='Ativo'?'pill-ok':'pill-muted'}">${p.status||'Ativo'}</span>
+          <button class="btn btn-outline btn-sm" onclick="verProcesso('${p.id||p.numero_cnj}')">Ver</button>
+        </div>
+      </div>`).join('')}
+    `:'<div style="color:var(--muted);font-size:13px;margin-bottom:12px">Nenhum processo vinculado ainda.</div>'}
+
+    <!-- Lançamentos financeiros -->
+    ${financeiros.length>0?`
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px">Lançamentos financeiros</div>
+    ${financeiros.map(f=>{
+      const dias = f.vencimento ? Math.round((new Date(f.vencimento)-new Date())/(1000*86400)) : null;
+      const stClass = f.status==='pago'?'pill-ok':f.status==='atrasado'?'pill-danger':'pill-warn';
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-bottom:1px solid var(--border)">
+        <div>
+          <div style="font-size:12px">${f.tipo||'honorario'} ${f.vencimento?'— '+new Date(f.vencimento).toLocaleDateString('pt-BR'):''}</div>
+          <div style="font-size:11px;color:var(--muted)">${f.observacoes||''}</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:13px;font-weight:600">R$ ${parseFloat(f.valor||0).toLocaleString('pt-BR',{minimumFractionDigits:2})}</span>
+          <span class="pill ${stClass}">${f.status}</span>
+          ${f.status!=='pago'?`<button class="btn btn-outline btn-sm" onclick="marcarPago('${f.id}')">✅ Pago</button>`:''}
+        </div>
+      </div>`;
+    }).join('')}
+    `:''}
+
+    <!-- Observações -->
+    ${c.observacoes?`
+    <div style="font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 6px">Observações</div>
+    <div style="font-size:13px;line-height:1.6;padding:12px;background:var(--cream);border-radius:8px">${c.observacoes}</div>
+    `:''}
+
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="btn btn-primary btn-sm" onclick="nav('financeiro');closeModal('ficha-cliente')">💰 Ir para financeiro</button>
+      <button class="btn btn-outline btn-sm" onclick="nav('processos');closeModal('ficha-cliente')">⚖️ Ver processos</button>
+    </div>`;
+
+  openModal('ficha-cliente');
+}
+
+async function marcarPago(id) {
+  if (dbOnline) await db.from('financeiro').update({status:'pago', data_pagamento: new Date().toISOString().split('T')[0]}).eq('id', id);
+  const f = ALL_FIN_DATA.find(x => x.id === id);
+  if (f) { f.status = 'pago'; f.data_pagamento = new Date().toISOString().split('T')[0]; }
+  carregarFinanceiro();
+}
+
+
 
 async function salvarPrazo() {
   const obj = {
@@ -1468,32 +1799,243 @@ function gerarRelatorioFinanceiro() {
   w.document.close();
 }
 
+// ── CNJ COMUNICAÇÕES — IMPORTAR PELO OAB ─────────────
+const CNJ_COMUNICA = 'https://comunica.pje.jus.br/consulta';
+let OAB_RESULTADOS = [];
+
+function abrirCNJComunica() {
+  const oab = document.getElementById('oab-numero').value.trim() || '160959';
+  const estado = document.getElementById('oab-estado').value || 'RJ';
+  const ini = document.getElementById('oab-data-ini').value || '2016-01-01';
+  const hoje = new Date().toISOString().split('T')[0];
+  const fim = document.getElementById('oab-data-fim').value || hoje;
+  const url = `${CNJ_COMUNICA}?dataDisponibilizacaoInicio=${ini}&dataDisponibilizacaoFim=${fim}&numeroOab=${oab}&estadoOab=${estado}`;
+  window.open(url, '_blank');
+}
+
+async function buscarPorOAB() {
+  const oab = document.getElementById('oab-numero').value.trim() || '160959';
+  const estado = document.getElementById('oab-estado').value || 'RJ';
+  const ini = document.getElementById('oab-data-ini').value || '2016-01-01';
+  const hoje = new Date().toISOString().split('T')[0];
+  const fim = document.getElementById('oab-data-fim').value || hoje;
+  const status = document.getElementById('oab-status');
+  const card = document.getElementById('oab-resultados-card');
+
+  status.innerHTML = '<span class="spinner"></span> Buscando processos no CNJ...';
+
+  // Tenta API CNJ Comunicações
+  const apiUrl = `https://gateway.api.cnj.jus.br/comunicacao-processual/v2/comunicacoes?numeroOab=${oab}&estadoOab=${estado}&dataDisponibilizacaoInicio=${ini}&dataDisponibilizacaoFim=${fim}&pagina=1&tamanhoPagina=100`;
+
+  let processos = [];
+
+  try {
+    // Tenta via proxy
+    const proxies = [
+      `https://corsproxy.io/?${encodeURIComponent(apiUrl)}`,
+      `https://api.allorigins.win/raw?url=${encodeURIComponent(apiUrl)}`
+    ];
+    for (const proxy of proxies) {
+      try {
+        const r = await fetch(proxy, { headers: { 'Accept': 'application/json' } });
+        if (r.ok) {
+          const d = await r.json();
+          if (d?.comunicacoes || d?.content || d?.data) {
+            processos = d.comunicacoes || d.content || d.data || [];
+            break;
+          }
+        }
+      } catch(e) {}
+    }
+  } catch(e) {}
+
+  // Se não conseguiu via API, usa comunicações processuais via scraping
+  if (processos.length === 0) {
+    // Abre o CNJ e instrui o usuário
+    status.innerHTML = `
+      <div class="alert warn">
+        <div class="alert-icon">⚠</div>
+        <div>
+          <strong>Acesso direto bloqueado pelo navegador.</strong><br>
+          O CNJ exige certificado digital para acesso programático.<br><br>
+          <strong>Como importar:</strong><br>
+          1. Clique em "Abrir CNJ Comunicações" acima<br>
+          2. No CNJ, selecione todos os processos<br>
+          3. Copie os números CNJ<br>
+          4. Cole abaixo para importar em lote
+          <div style="margin-top:12px">
+            <textarea id="oab-cnj-manual" placeholder="Cole os números CNJ aqui, um por linha:&#10;0000000-00.0000.8.19.0000&#10;0000001-00.0000.8.19.0000" 
+              style="width:100%;min-height:120px;padding:10px;border:1px solid var(--border);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:12px;resize:vertical"></textarea>
+            <button class="btn btn-primary" style="margin-top:8px" onclick="importarManual()">💾 Importar números colados</button>
+          </div>
+        </div>
+      </div>`;
+    return;
+  }
+
+  OAB_RESULTADOS = processos;
+  renderizarResultadosOAB(processos);
+  status.innerHTML = `<span style="color:var(--ok)">✅ ${processos.length} processos encontrados!</span>`;
+}
+
+function renderizarResultadosOAB(lista) {
+  const card = document.getElementById('oab-resultados-card');
+  const tbody = document.getElementById('oab-tbody');
+  const titulo = document.getElementById('oab-resultados-titulo');
+  card.style.display = 'block';
+  titulo.textContent = `${lista.length} processos encontrados`;
+  tbody.innerHTML = lista.map((p, i) => {
+    const cnj = p.numeroProcesso || p.numero || '—';
+    const orgao = p.orgaoJulgador?.nome || p.orgao || '—';
+    const tipo = p.tipoComunicacao || p.tipo || '—';
+    const partes = p.partes?.map(x => x.nome).join(', ') || p.nomePartes || '—';
+    const data = p.dataDisponibilizacao ? new Date(p.dataDisponibilizacao).toLocaleDateString('pt-BR') : '—';
+    const segredo = p.segredoJustica || p.sigiloso ? '🔒 Sim' : '—';
+    return `<tr>
+      <td><input type="checkbox" class="oab-check" data-idx="${i}" checked></td>
+      <td style="font-family:monospace;font-size:10px">${cnj}</td>
+      <td style="font-size:11px">${orgao}</td>
+      <td style="font-size:11px">${tipo}</td>
+      <td style="font-size:11px">${partes.substring(0,40)}${partes.length>40?'...':''}</td>
+      <td style="font-size:11px">${data}</td>
+      <td style="font-size:11px">${segredo}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filtrarResultadosOAB(termo) {
+  const t = termo.toLowerCase();
+  const lista = t ? OAB_RESULTADOS.filter(p =>
+    (p.numeroProcesso||'').toLowerCase().includes(t) ||
+    (p.orgaoJulgador?.nome||'').toLowerCase().includes(t) ||
+    (p.nomePartes||'').toLowerCase().includes(t)
+  ) : OAB_RESULTADOS;
+  renderizarResultadosOAB(lista);
+}
+
+function toggleTodos(checked) {
+  document.querySelectorAll('.oab-check').forEach(c => c.checked = checked);
+}
+
+async function importarSelecionados() {
+  const checks = document.querySelectorAll('.oab-check:checked');
+  const status = document.getElementById('oab-status');
+  status.innerHTML = `<span class="spinner"></span> Importando ${checks.length} processos...`;
+  let importados = 0;
+  for (const c of checks) {
+    const idx = parseInt(c.dataset.idx);
+    const p = OAB_RESULTADOS[idx];
+    if (!p) continue;
+    const cnj = p.numeroProcesso || p.numero;
+    if (!cnj) continue;
+    const obj = {
+      numero_cnj: cnj,
+      area: detectarArea(p),
+      cliente: p.partes?.find(x=>x.tipo==='AUTOR'||x.tipo==='REQUERENTE')?.nome || '',
+      assunto: p.assunto || p.tipoComunicacao || '',
+      comarca: p.orgaoJulgador?.nome || '',
+      ultima_mov: p.tipoComunicacao || '',
+      ultima_data: p.dataDisponibilizacao ? p.dataDisponibilizacao.split('T')[0] : null,
+      status: 'Ativo',
+      tribunal: 'TJRJ'
+    };
+    // Verifica se já existe
+    const existe = ALL_PROCESSOS_DATA.find(x => x.numero_cnj === cnj);
+    if (!existe) {
+      if (dbOnline) {
+        const { error } = await db.from('processos').insert([obj]);
+        if (!error) { LOCAL_PROCESSOS.push(obj); importados++; }
+      } else {
+        LOCAL_PROCESSOS.push(obj);
+        importados++;
+      }
+    }
+  }
+  ALL_PROCESSOS_DATA = LOCAL_PROCESSOS;
+  status.innerHTML = `<span style="color:var(--ok)">✅ ${importados} processos importados com sucesso!</span>`;
+  carregarProcessos();
+}
+
+async function importarTodosOAB() {
+  await buscarPorOAB();
+  if (OAB_RESULTADOS.length > 0) await importarSelecionados();
+}
+
+async function importarManual() {
+  const texto = document.getElementById('oab-cnj-manual')?.value || '';
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.match(/\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}/));
+  const status = document.getElementById('oab-status');
+  if (linhas.length === 0) {
+    status.innerHTML = '<span style="color:var(--danger)">Nenhum número CNJ válido encontrado!</span>';
+    return;
+  }
+  status.innerHTML = `<span class="spinner"></span> Importando ${linhas.length} processos...`;
+  let importados = 0;
+  for (const cnj of linhas) {
+    const existe = ALL_PROCESSOS_DATA.find(x => x.numero_cnj === cnj);
+    if (!existe) {
+      const obj = { numero_cnj: cnj, area: 'Cível', status: 'Ativo', tribunal: 'TJRJ', cliente: '', assunto: '', comarca: '' };
+      if (dbOnline) {
+        const { error } = await db.from('processos').insert([obj]);
+        if (!error) { LOCAL_PROCESSOS.push(obj); importados++; }
+      } else {
+        LOCAL_PROCESSOS.push(obj);
+        importados++;
+      }
+    }
+  }
+  ALL_PROCESSOS_DATA = LOCAL_PROCESSOS;
+  status.innerHTML = `<span style="color:var(--ok)">✅ ${importados} processos importados! Agora use "Atualizar ativos" para buscar os dados no CNJ.</span>`;
+  carregarProcessos();
+}
+
+function detectarArea(p) {
+  const txt = (p.assunto||'').toLowerCase() + (p.tipoComunicacao||'').toLowerCase();
+  if (txt.includes('alimentos')||txt.includes('família')||txt.includes('divórcio')||txt.includes('guarda')||txt.includes('inventário')) return 'Família';
+  if (txt.includes('trabalhista')||txt.includes('acidente de trabalho')) return 'Trabalhista';
+  if (txt.includes('inss')||txt.includes('previdenci')||txt.includes('auxílio')) return 'Previdenciário';
+  if (txt.includes('cdc')||txt.includes('consumidor')||txt.includes('dano moral')) return 'Consumidor';
+  return 'Cível';
+}
+
 // ── DATAJUD CNJ ───────────────────────────────────────
 const DJ_KEY = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
 const DJ_URL = 'https://api-publica.datajud.cnj.jus.br';
-const CORS_PROXY = 'https://corsproxy.io/?';
 
 async function djFetch(tribunal, cnj) {
   const url = `${DJ_URL}/api_publica_${tribunal}/_search`;
   const body = JSON.stringify({ query: { match: { 'numeroProcesso': cnj } } });
-  // Tenta direto primeiro, se falhar usa proxy
+  
+  // Proxy 1: allorigins
   try {
-    const r = await fetch(url, {
+    const r = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`, {
       method: 'POST',
       headers: { 'Authorization': `APIKey ${DJ_KEY}`, 'Content-Type': 'application/json' },
       body
     });
-    if (r.ok) return await r.json();
+    if (r.ok) { const d = await r.json(); if(d?.hits) return d; }
   } catch(e) {}
-  // Fallback: proxy CORS
+
+  // Proxy 2: corsproxy.io
   try {
-    const r2 = await fetch(CORS_PROXY + encodeURIComponent(url), {
+    const r2 = await fetch(`https://corsproxy.io/?${encodeURIComponent(url)}`, {
       method: 'POST',
       headers: { 'Authorization': `APIKey ${DJ_KEY}`, 'Content-Type': 'application/json' },
       body
     });
-    if (r2.ok) return await r2.json();
+    if (r2.ok) { const d2 = await r2.json(); if(d2?.hits) return d2; }
   } catch(e) {}
+
+  // Direto (funciona local)
+  try {
+    const r3 = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `APIKey ${DJ_KEY}`, 'Content-Type': 'application/json' },
+      body
+    });
+    if (r3.ok) return await r3.json();
+  } catch(e) {}
+
   return null;
 }
 
