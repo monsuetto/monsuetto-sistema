@@ -1471,6 +1471,31 @@ function gerarRelatorioFinanceiro() {
 // ── DATAJUD CNJ ───────────────────────────────────────
 const DJ_KEY = 'cDZHYzlZa0JadVREZDJCendQbXY6SkJlTzNjLV9TRENyQk1RdnFKZGRQdw==';
 const DJ_URL = 'https://api-publica.datajud.cnj.jus.br';
+const CORS_PROXY = 'https://corsproxy.io/?';
+
+async function djFetch(tribunal, cnj) {
+  const url = `${DJ_URL}/api_publica_${tribunal}/_search`;
+  const body = JSON.stringify({ query: { match: { 'numeroProcesso': cnj } } });
+  // Tenta direto primeiro, se falhar usa proxy
+  try {
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Authorization': `APIKey ${DJ_KEY}`, 'Content-Type': 'application/json' },
+      body
+    });
+    if (r.ok) return await r.json();
+  } catch(e) {}
+  // Fallback: proxy CORS
+  try {
+    const r2 = await fetch(CORS_PROXY + encodeURIComponent(url), {
+      method: 'POST',
+      headers: { 'Authorization': `APIKey ${DJ_KEY}`, 'Content-Type': 'application/json' },
+      body
+    });
+    if (r2.ok) return await r2.json();
+  } catch(e) {}
+  return null;
+}
 
 const DJ_TRIBUNAIS = {
   '8.19': 'tjrj', '8.26': 'tjsp', '8.13': 'tjmg', '8.21': 'tjrs',
@@ -1499,12 +1524,7 @@ async function consultarDataJudDireto(cnj) {
   if(res) res.innerHTML = '<div style="text-align:center;padding:40px"><div class="spinner"></div> Consultando CNJ...</div>';
   const tribunal = getTribunal(cnj);
   try {
-    const resp = await fetch(`${DJ_URL}/api_publica_${tribunal}/_search`, {
-      method: 'POST',
-      headers: { 'Authorization': `APIKey ${DJ_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ query: { match: { 'numeroProcesso': cnj } } })
-    });
-    const data = await resp.json();
+    const data = await djFetch(tribunal, cnj);
     const hits = data?.hits?.hits || [];
     if(hits.length === 0) {
       if(res) res.innerHTML = `<div class="alert warn"><div class="alert-icon">⚠</div><div>Processo não encontrado no DataJud para o tribunal <strong>${tribunal.toUpperCase()}</strong>. Verifique o número CNJ.</div></div>`;
@@ -1565,12 +1585,7 @@ async function atualizarTodosProcessos() {
   for(const p of ativos) {
     try {
       const tribunal = getTribunal(p.numero_cnj);
-      const resp = await fetch(`${DJ_URL}/api_publica_${tribunal}/_search`, {
-        method:'POST',
-        headers:{'Authorization':`APIKey ${DJ_KEY}`,'Content-Type':'application/json'},
-        body: JSON.stringify({query:{match:{'numeroProcesso':p.numero_cnj}}})
-      });
-      const data = await resp.json();
+      const data = await djFetch(tribunal, p.numero_cnj);
       const hit = data?.hits?.hits?.[0]?._source;
       if(hit) {
         const ultima = hit.movimentos?.[0];
